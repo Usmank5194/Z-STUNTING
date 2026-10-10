@@ -3,46 +3,53 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>SISTUNTING JENEPONTO</title>
+<title>Z-STUNTING · DP2KBP3A Jeneponto</title>
+<link rel="icon" type="image/png" href="logo.png">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif}
-:root{--primary:#059669;--primary-dark:#047857;--primary-light:#d1fae5;--danger:#dc2626;--danger-light:#fee2e2;--warning:#f59e0b;--warning-light:#fef3c7;--info:#0891b2;--info-light:#cffafe;--success:#16a34a;--success-light:#dcfce7;--gray-50:#f9fafb;--gray-100:#f3f4f6;--gray-200:#e5e7eb;--gray-300:#d1d5db;--gray-400:#9ca3af;--gray-500:#6b7280;--gray-700:#374151;--gray-900:#111827}
+:root{--primary:#0284c7;--primary-dark:#0369a1;--primary-light:#e0f2fe;--navy:#0f172a;--danger:#dc2626;--danger-light:#fee2e2;--warning:#f59e0b;--warning-light:#fef3c7;--info:#0891b2;--info-light:#cffafe;--success:#16a34a;--success-light:#dcfce7;--gray-50:#f9fafb;--gray-100:#f3f4f6;--gray-200:#e5e7eb;--gray-300:#d1d5db;--gray-400:#9ca3af;--gray-500:#6b7280;--gray-700:#374151;--gray-900:#111827}
 body{background:var(--gray-50);color:var(--gray-900);font-size:14px;line-height:1.5}
 button{cursor:pointer;font-family:inherit}input,select,textarea{font-family:inherit;font-size:14px}
 #loadingOverlay{position:fixed;inset:0;background:rgba(255,255,255,.95);z-index:1000;display:none;align-items:center;justify-content:center;flex-direction:column;gap:16px}
 #loadingOverlay.show{display:flex}
 .spinner{width:50px;height:50px;border:4px solid var(--gray-200);border-top-color:var(--primary);border-radius:50%;animation:spin 1s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
-#loginView{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#059669,#0891b2);padding:20px}
-.login-card{background:#fff;border-radius:20px;padding:40px;width:100%;max-width:440px;box-shadow:0 25px 50px rgba(0,0,0,.2)}
+#loginView{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#0284c7,#0f172a);padding:20px}
+.login-card{background:#fff;border-radius:20px;padding:36px 32px;width:100%;max-width:420px;box-shadow:0 25px 50px rgba(0,0,0,.3)}
 .login-logo{text-align:center;margin-bottom:24px}
-.login-logo .icon{width:70px;height:70px;background:linear-gradient(135deg,#059669,#0891b2);border-radius:20px;display:inline-flex;align-items:center;justify-content:center;font-size:36px;margin-bottom:12px}
-.login-logo h1{font-size:22px;font-weight:700}.login-logo p{color:var(--gray-500);font-size:13px;margin-top:4px}
-.form-group{margin-bottom:16px}.form-group label{display:block;font-weight:600;margin-bottom:6px;font-size:13px;color:var(--gray-700)}
-.form-group input,.form-group select,.form-group textarea{width:100%;padding:11px 14px;border:1.5px solid var(--gray-300);border-radius:10px;outline:none}
-.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(5,150,105,.1)}
-.btn-primary{width:100%;padding:12px;background:var(--primary);color:#fff;border:none;border-radius:10px;font-weight:600;font-size:15px}
+.login-logo img{max-width:200px;width:100%;height:auto;margin-bottom:8px}
+.login-logo h1{font-size:22px;font-weight:800;color:var(--navy);letter-spacing:1px}
+.login-logo p{color:var(--gray-500);font-size:12px;margin-top:4px}
+.form-group{margin-bottom:14px}
+.form-group label{display:block;font-weight:600;margin-bottom:6px;font-size:12.5px;color:var(--gray-700)}
+.form-group input{width:100%;padding:12px 14px;border:1.5px solid var(--gray-300);border-radius:10px;outline:none;font-size:14px}
+.form-group input:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(2,132,199,.1)}
+.btn-primary{width:100%;padding:13px;background:var(--primary);color:#fff;border:none;border-radius:10px;font-weight:700;font-size:15px;transition:.2s}
 .btn-primary:hover{background:var(--primary-dark)}
-.demo-box{background:var(--gray-50);border:1px dashed var(--gray-300);border-radius:10px;padding:12px;margin-top:16px;font-size:12px;color:var(--gray-500)}
-.demo-box b{color:var(--gray-700)}.demo-box div{margin-top:4px}
+.login-note{margin-top:18px;padding:12px;background:var(--gray-50);border-radius:10px;font-size:11.5px;color:var(--gray-500);text-align:center;line-height:1.6}
+.login-note b{color:var(--navy)}
 #appView{display:none}.app-layout{display:flex;min-height:100vh}
 .sidebar{width:260px;background:#fff;border-right:1px solid var(--gray-200);position:fixed;height:100vh;overflow-y:auto;z-index:50}
-.sidebar-header{padding:20px;border-bottom:1px solid var(--gray-200)}
+.sidebar-header{padding:18px 20px;border-bottom:1px solid var(--gray-200)}
 .sidebar-header .logo{display:flex;align-items:center;gap:10px}
-.sidebar-header .logo-icon{width:40px;height:40px;background:linear-gradient(135deg,#059669,#0891b2);border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px}
-.sidebar-header h2{font-size:15px;font-weight:700}.sidebar-header p{font-size:11px;color:var(--gray-500)}
+.sidebar-header .logo-icon{width:44px;height:44px;background:#fff;border-radius:10px;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;border:1px solid var(--gray-200)}
+.sidebar-header .logo-icon img{width:100%;height:100%;object-fit:contain}
+.sidebar-header h2{font-size:14px;font-weight:800;line-height:1.2;color:var(--navy);letter-spacing:.5px}
+.sidebar-header p{font-size:10px;color:var(--gray-500);margin-top:2px}
 .sidebar-user{padding:14px 20px;background:var(--primary-light);border-bottom:1px solid var(--gray-200);display:flex;align-items:center;gap:10px}
-.avatar{width:38px;height:38px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px}
-.sidebar-user .info{font-size:12px}.sidebar-user .name{font-weight:600}.sidebar-user .role{color:var(--primary-dark);font-size:11px}
+.avatar{width:38px;height:38px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex-shrink:0}
+.sidebar-user .info{font-size:12px;overflow:hidden}
+.sidebar-user .name{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sidebar-user .role{color:var(--primary-dark);font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .nav{padding:12px 10px}
-.nav-item{display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:10px;color:var(--gray-700);font-weight:500;margin-bottom:2px;border:none;background:transparent;width:100%;text-align:left;font-size:13.5px}
+.nav-item{display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:10px;color:var(--gray-700);font-weight:500;margin-bottom:2px;border:none;background:transparent;width:100%;text-align:left;font-size:13px}
 .nav-item:hover{background:var(--gray-100)}.nav-item.active{background:var(--primary);color:#fff}
 .nav-item .ic{font-size:16px;width:20px;text-align:center}
 .nav-item .badge{margin-left:auto;background:var(--danger);color:#fff;font-size:10px;padding:2px 7px;border-radius:10px;font-weight:700}
 .nav-item.active .badge{background:rgba(255,255,255,.3)}
-.nav-section{padding:14px 20px 6px;font-size:10.5px;font-weight:700;color:var(--gray-400);text-transform:uppercase;letter-spacing:.8px}
+.nav-section{padding:14px 20px 6px;font-size:10px;font-weight:700;color:var(--gray-400);text-transform:uppercase;letter-spacing:.8px}
 .main-content{margin-left:260px;flex:1;min-height:100vh}
 .topbar{background:#fff;border-bottom:1px solid var(--gray-200);padding:14px 28px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:40;flex-wrap:wrap;gap:8px}
 .topbar h1{font-size:18px;font-weight:700}.topbar .crumb{color:var(--gray-500);font-size:12px;margin-top:2px}
@@ -55,7 +62,6 @@ button{cursor:pointer;font-family:inherit}input,select,textarea{font-family:inhe
 .content{padding:24px 28px}
 .btn{padding:8px 14px;border-radius:8px;border:none;font-weight:600;font-size:13px;display:inline-flex;align-items:center;gap:6px}
 .btn-sm{padding:6px 11px;font-size:12px}.btn-primary-solid{background:var(--primary);color:#fff}
-.btn-primary-solid:hover{background:var(--primary-dark)}
 .btn-outline{background:#fff;border:1.5px solid var(--gray-300);color:var(--gray-700)}
 .btn-danger{background:var(--danger);color:#fff}.btn-warning{background:var(--warning);color:#fff}
 .btn-info{background:var(--info);color:#fff}
@@ -104,10 +110,6 @@ td{padding:11px 12px;border-bottom:1px solid var(--gray-100);vertical-align:midd
 .modal-footer{padding:16px 24px;border-top:1px solid var(--gray-200);display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap}
 .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .form-grid .full{grid-column:1/-1}
-.chip-group{display:flex;flex-wrap:wrap;gap:8px}
-.chip{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border:1.5px solid var(--gray-300);border-radius:20px;font-size:12.5px;cursor:pointer;background:#fff}
-.chip input{display:none}
-.chip.checked{background:var(--primary-light);border-color:var(--primary);color:var(--primary-dark);font-weight:600}
 .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 24px;font-size:13px}
 .info-row{display:flex;gap:8px;padding:6px 0;border-bottom:1px dashed var(--gray-200)}
 .info-row .lbl{color:var(--gray-500);min-width:110px;flex-shrink:0}
@@ -118,13 +120,12 @@ td{padding:11px 12px;border-bottom:1px solid var(--gray-100);vertical-align:midd
 .empty{text-align:center;padding:40px 20px;color:var(--gray-500)}
 .empty .ic{font-size:44px;opacity:.3;margin-bottom:8px}
 .menu-toggle{display:none;background:#fff;border:1px solid var(--gray-300);border-radius:8px;padding:8px 10px;font-size:16px}
-.zscore-card{background:linear-gradient(135deg,#d1fae5,#cffafe);border-radius:12px;padding:14px;margin-top:10px}
+.zscore-card{background:linear-gradient(135deg,#e0f2fe,#cffafe);border-radius:12px;padding:14px;margin-top:10px}
 .zscore-card.warn{background:linear-gradient(135deg,#fef3c7,#fee2e2)}
 .zscore-card.bad{background:linear-gradient(135deg,#fee2e2,#fecaca)}
 .zscore-row{display:flex;justify-content:space-between;font-size:12.5px;padding:3px 0}
 .zscore-row b{font-family:monospace}
-.team-card{background:#fff;border:1px solid var(--gray-200);border-radius:12px;padding:16px;cursor:pointer}
-.team-card:hover{border-color:var(--primary)}
+.team-card{background:#fff;border:1px solid var(--gray-200);border-radius:12px;padding:16px}
 .team-card .team-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
 .team-card .team-title{font-weight:700;color:var(--primary)}
 .team-card .member{display:flex;gap:10px;padding:6px 0;font-size:12.5px;align-items:center}
@@ -133,6 +134,7 @@ td{padding:11px 12px;border-bottom:1px solid var(--gray-100);vertical-align:midd
 .team-card .member.pkk .ic{background:var(--warning-light);color:#92400e}
 .team-card .member.kb .ic{background:var(--info-light);color:var(--info)}
 .wa-link{display:inline-flex;align-items:center;gap:6px;padding:6px 11px;background:#25D366;color:#fff;border-radius:8px;text-decoration:none;font-size:12px;font-weight:600}
+.hint{font-size:12px;color:var(--gray-500);margin-top:8px;line-height:1.6;background:var(--gray-50);padding:10px;border-radius:8px}
 @media(max-width:900px){.sidebar{transform:translateX(-100%);transition:.3s}.sidebar.open{transform:translateX(0)}.main-content{margin-left:0}.form-grid{grid-template-columns:1fr}.info-grid{grid-template-columns:1fr}.content{padding:16px}.topbar{padding:12px 16px}.menu-toggle{display:block}}
 </style>
 </head>
@@ -143,20 +145,21 @@ td{padding:11px 12px;border-bottom:1px solid var(--gray-100);vertical-align:midd
 <div id="loginView">
   <div class="login-card">
     <div class="login-logo">
-      <div class="icon">🏥</div>
-      <h1>SISTUNTING JENEPONTO</h1>
-      <p>Sistem Informasi Pemberantasan Stunting</p>
+      <img src="logo.png" alt="Z-STUNTING" onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
+      <h1 style="display:none">Z-STUNTING</h1>
+      <h1 style="font-size:20px;color:#0f172a;letter-spacing:1px;margin-top:4px">Z-STUNTING</h1>
+      <p>DP2KBP3A Kabupaten Jeneponto</p>
+      <p style="font-size:10.5px;color:var(--gray-400);margin-top:6px">Sistem Pendampingan Keluarga Stunting</p>
     </div>
     <form onsubmit="doLogin(event)">
-      <div class="form-group"><label>Username</label><input type="text" id="username" placeholder="Masukkan username" required></div>
-      <div class="form-group"><label>Password</label><input type="password" id="password" placeholder="Masukkan password" required></div>
-      <button type="submit" class="btn-primary">🔐 Masuk ke Sistem</button>
+      <div class="form-group"><label>Username</label><input type="text" id="username" placeholder="Username TPK Anda" required autocomplete="username" autocapitalize="none"></div>
+      <div class="form-group"><label>Password</label><input type="password" id="password" placeholder="Password" required autocomplete="current-password"></div>
+      <button type="submit" class="btn-primary">🔐 Masuk</button>
     </form>
-    <div class="demo-box">
-      <b>🔑 Akun:</b>
-      <div>• admin / admin123</div>
-      <div>• penyuluh / penyuluh123</div>
-      <div>• kader / kader123</div>
+    <div class="login-note">
+      <b>Kader TPK:</b> Gunakan username dari Penyuluh KB<br>
+      <b>Format:</b> <i>kecamatan-desa-tim</i> (contoh: <i>arungkeke-pallantikang-1</i>)<br>
+      <b>Lupa password?</b> Hubungi Penyuluh KB
     </div>
   </div>
 </div>
@@ -164,18 +167,23 @@ td{padding:11px 12px;border-bottom:1px solid var(--gray-100);vertical-align:midd
 <div id="appView">
   <div class="app-layout">
     <aside class="sidebar" id="sidebar">
-      <div class="sidebar-header"><div class="logo"><div class="logo-icon">🏥</div><div><h2>SISTUNTING</h2><p>Kabupaten Jeneponto</p></div></div></div>
+      <div class="sidebar-header"><div class="logo">
+        <div class="logo-icon"><img src="logo.png" alt="Z" onerror="this.parentElement.innerHTML='Z'"></div>
+        <div><h2>Z-STUNTING</h2><p>DP2KBP3A Jeneponto</p></div>
+      </div></div>
       <div class="sidebar-user" id="userBox"></div>
       <nav class="nav">
         <div class="nav-section">Menu Utama</div>
         <button class="nav-item active" data-view="dashboard"><span class="ic">📊</span> Dashboard</button>
         <button class="nav-item" data-view="kasus"><span class="ic">👶</span> Data Kasus <span class="badge" id="badgeKasus">0</span></button>
         <button class="nav-item" data-view="kunjungan"><span class="ic">🏠</span> Kunjungan Saya</button>
-        <div class="nav-section">Tim TPK</div>
-        <button class="nav-item" data-view="tpk"><span class="ic">👥</span> Data TPK <span class="badge" id="badgeTPK">0</span></button>
-        <button class="nav-item" data-view="progress"><span class="ic">📊</span> Progress Tim</button>
+        <div class="nav-section" id="navAdmin" style="display:none">Admin</div>
+        <button class="nav-item" data-view="tpk" id="navTPK" style="display:none"><span class="ic">👥</span> Semua TPK <span class="badge" id="badgeTPK">0</span></button>
+        <button class="nav-item" data-view="progress" id="navProgress" style="display:none"><span class="ic">📊</span> Progress Tim</button>
+        <button class="nav-item" data-view="akun" id="navAkun" style="display:none"><span class="ic">🔑</span> Kelola Akun</button>
         <div class="nav-section">Lainnya</div>
-        <button class="nav-item" data-view="pengaturan"><span class="ic">⚙️</span> Pengaturan</button>
+        <button class="nav-item" data-view="profil"><span class="ic">👤</span> Akun Saya</button>
+        <button class="nav-item" data-view="pengaturan" id="navPengaturan" style="display:none"><span class="ic">⚙️</span> Pengaturan</button>
       </nav>
       <div style="padding:16px 20px"><button class="btn btn-outline" style="width:100%" onclick="logout()">🚪 Keluar</button></div>
     </aside>
@@ -197,8 +205,7 @@ td{padding:11px 12px;border-bottom:1px solid var(--gray-100);vertical-align:midd
 <div class="modal-bg" id="modalDetail"><div class="modal" style="max-width:820px"><div class="modal-header"><h3>📋 Detail Kasus</h3><button class="modal-close" onclick="closeModal('modalDetail')">×</button></div><div class="modal-body" id="detailBody"></div><div class="modal-footer" id="detailFooter"></div></div></div>
 <div class="modal-bg" id="modalEdit"><div class="modal" style="max-width:720px"><div class="modal-header"><h3 id="editTitle">✏️ Edit</h3><button class="modal-close" onclick="closeModal('modalEdit')">×</button></div><div class="modal-body" id="editBody"></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modalEdit')">Batal</button><button class="btn btn-primary-solid" onclick="saveEdit()">💾 Simpan</button></div></div></div>
 <div class="modal-bg" id="modalKunjungan"><div class="modal" style="max-width:780px"><div class="modal-header"><h3>🏠 Form Kunjungan</h3><button class="modal-close" onclick="closeModal('modalKunjungan')">×</button></div><div class="modal-body" id="kunjunganBody"></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modalKunjungan')">Batal</button><button class="btn btn-primary-solid" onclick="saveKunjungan()">💾 Simpan</button></div></div></div>
-<div class="modal-bg" id="modalAssign"><div class="modal" style="max-width:620px"><div class="modal-header"><h3>👥 Tugaskan ke Tim</h3><button class="modal-close" onclick="closeModal('modalAssign')">×</button></div><div class="modal-body" id="assignBody"></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modalAssign')">Batal</button><button class="btn btn-primary-solid" onclick="saveAssign()">💾 Simpan</button></div></div></div>
-<div class="modal-bg" id="modalConfirm"><div class="modal" style="max-width:520px"><div class="modal-header"><h3 id="confirmTitle">Konfirmasi</h3><button class="modal-close" onclick="closeModal('modalConfirm')">×</button></div><div class="modal-body" id="confirmBody"></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modalConfirm')">Batal</button><button class="btn btn-danger" id="confirmBtn">Ya, Lanjutkan</button></div></div></div>
+<div class="modal-bg" id="modalConfirm"><div class="modal" style="max-width:520px"><div class="modal-header"><h3 id="confirmTitle">Konfirmasi</h3><button class="modal-close" onclick="closeModal('modalConfirm')">×</button></div><div class="modal-body" id="confirmBody"></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modalConfirm')">Batal</button><button class="btn btn-danger" id="confirmBtn">Lanjutkan</button></div></div></div>
 
 <div id="toast"></div>
 
@@ -207,40 +214,14 @@ td{padding:11px 12px;border-bottom:1px solid var(--gray-100);vertical-align:midd
 const CLOUD_URL = 'https://gwiripziiwgumxymdmso.supabase.co';
 const CLOUD_KEY = 'sb_publishable_2UBNn2dU3qBJZLjgOm-FKA_hPUK7eUi';
 const KECAMATAN = ['ARUNGKEKE','BANGKALA','BANGKALA BARAT','BATANG','BINAMU','BONTORAMBA','KELARA','RUMBIA','TAMALATEA','TAROWANG','TURATEA'];
-const INTERVENSI_LIST = [
-  {id:'pmt',label:'PMT Pemulihan'},{id:'pkmk',label:'PKMK (Protein Hewani)'},
-  {id:'konseling',label:'Konseling Gizi'},{id:'asi',label:'Edukasi ASI Eksklusif'},
-  {id:'mpasi',label:'Edukasi MP-ASI'},{id:'rujukan',label:'Rujukan ke Faskes'},
-  {id:'vit_a',label:'Vitamin A'},{id:'obat_cacing',label:'Obat Cacing'},
-  {id:'sanitasi',label:'Perbaikan Sanitasi'},{id:'air_bersih',label:'Akses Air Bersih'},
-  {id:'imunisasi',label:'Imunisasi Lengkap'},{id:'kb',label:'KB Pasca Salin'}
-];
-const USERS = {
-  admin:{pass:'admin123',nama:'Administrator Dinkes',role:'Super Admin',avatar:'AD'},
-  puskesmas:{pass:'puskesmas123',nama:'Admin Puskesmas',role:'Admin Puskesmas',avatar:'PK'},
-  kader:{pass:'kader123',nama:'Kader TPK',role:'Kader TPK',avatar:'KD'},
-  penyuluh:{pass:'penyuluh123',nama:'Penyuluh KB Jeneponto',role:'Penyuluh KB',avatar:'KB'}
-};
+const ADMIN_USER = { username:'penyuluh', password:'zstunting2026', nama:'Penyuluh KB Jeneponto', role:'admin' };
+const DEFAULT_PASS = 'zstunting';
 
-/* ==================== WHO Z-SCORE ==================== */
-const WHO = {
-  ages:[0,3,6,9,12,18,24,36,48,60],
-  BBU_M_MED:[3.3,6.4,7.9,8.9,9.6,10.9,12.2,14.3,16.3,18.3],BBU_M_SD:[0.5,0.8,0.9,0.9,1.0,1.1,1.3,1.5,1.8,2.1],
-  BBU_F_MED:[3.2,5.8,7.3,8.2,8.9,10.2,11.5,13.9,16.1,18.2],BBU_F_SD:[0.5,0.7,0.8,0.9,1.0,1.2,1.4,1.6,1.9,2.2],
-  TBU_M_MED:[49.9,61.4,67.6,72.0,75.7,82.3,87.8,96.1,103.3,110.0],TBU_M_SD:[1.9,2.1,2.3,2.4,2.5,2.8,3.0,3.5,4.0,4.5],
-  TBU_F_MED:[49.1,59.8,65.9,70.4,74.0,80.7,86.4,95.1,102.7,109.4],TBU_F_SD:[1.8,2.1,2.2,2.4,2.5,2.8,3.1,3.6,4.1,4.6],
-  interp(age,arr){const A=this.ages;if(age<=A[0])return arr[0];if(age>=A[A.length-1])return arr[arr.length-1];for(let i=0;i<A.length-1;i++){if(age>=A[i]&&age<=A[i+1]){const t=(age-A[i])/(A[i+1]-A[i]);return arr[i]+t*(arr[i+1]-arr[i]);}}return arr[arr.length-1];},
-  zBBU(bb,age,jk){const m=this.interp(age,jk==='L'?this.BBU_M_MED:this.BBU_F_MED);const s=this.interp(age,jk==='L'?this.BBU_M_SD:this.BBU_F_SD);return (bb-m)/s;},
-  zTBU(tb,age,jk){const m=this.interp(age,jk==='L'?this.TBU_M_MED:this.TBU_F_MED);const s=this.interp(age,jk==='L'?this.TBU_M_SD:this.TBU_F_SD);return (tb-m)/s;},
-  klasifikasi(zBBU,zTBU){if(zTBU<-2)return 'Stunting';if(zBBU<-3)return 'Gizi Buruk';if(zBBU<-2)return 'Gizi Kurang';return 'Ideal';}
-};
-
-/* ==================== APP STATE ==================== */
 const APP = {
-  user:null, state:{cases:[],tpk:[],auditLog:[]},
+  user:null, state:{cases:[],tpk:[],accounts:[],auditLog:[]},
   filters:{search:'',kecamatan:'',status_gizi:'',status_pendampingan:''},
   page:1, pageSize:20,
-  currentDetail:null, currentEdit:null, currentKunjungan:null, currentAssign:null
+  currentDetail:null, currentEdit:null, currentKunjungan:null
 };
 let _sbClient = null;
 
@@ -249,9 +230,11 @@ const esc = s => String(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>'
 const fmtNum = n => (n||0).toLocaleString('id-ID');
 const fmtDate = s => { if(!s) return '-'; return new Date(s).toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'}); };
 const findTeam = id => (APP.state.tpk||[]).find(t => t.teamId === id);
-const teamLabel = id => { const t = findTeam(id); return t ? `${t.desa} - Tim ${t.tim}` : '-'; };
+const teamLabel = id => { const t = findTeam(id); return t ? `${t.desa} · Tim ${t.tim}` : '-'; };
 const badgeGizi = s => { const m={'Stunting':'badge-danger','Gizi Kurang':'badge-warning','Gizi Buruk':'badge-danger','Ideal':'badge-success'}; return `<span class="badge ${m[s]||'badge-gray'}">${s||'-'}</span>`; };
 const badgePend = s => { const m={'Belum Dikunjungi':'badge-gray','Sudah Dikunjungi':'badge-info','Dalam Pendampingan':'badge-warning','Graduated':'badge-success'}; return `<span class="badge ${m[s]||'badge-gray'}">${s||'-'}</span>`; };
+const slug = s => String(s||'').toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'');
+const generateUsername = (t) => `${slug(t.kecamatan)}-${slug(t.desa)}-${t.tim}`;
 
 function toast(msg, type=''){
   const t = document.getElementById('toast');
@@ -264,11 +247,10 @@ function hideLoading(){ document.getElementById('loadingOverlay').classList.remo
 
 /* ==================== CLOUD ==================== */
 const Cloud = {
-  status:'local', lastSync:null, timer:null,
+  status:'local', timer:null,
   init(){
     if(!_sbClient) _sbClient = supabase.createClient(CLOUD_URL, CLOUD_KEY);
-    this.status = 'online';
-    this.updateIndicator();
+    this.status = 'online'; this.updateIndicator();
     if(!this.timer) this.timer = setInterval(() => { if(APP.user) this.pull(true); }, 60000);
   },
   async push(){
@@ -277,7 +259,7 @@ const Cloud = {
       this.setStatus('syncing');
       const {error} = await _sbClient.from('sistunting_state').upsert({ id:'main', data:APP.state, updated_at:new Date().toISOString() });
       if(error) throw error;
-      this.lastSync = new Date(); this.setStatus('online');
+      this.setStatus('online');
     } catch(e){ console.error('Push error:', e); this.setStatus('error'); }
   },
   async pull(silent = false){
@@ -293,26 +275,18 @@ const Cloud = {
         APP.state = data.data;
         if(!APP.state.cases) APP.state.cases = [];
         if(!APP.state.tpk) APP.state.tpk = [];
+        if(!APP.state.accounts) APP.state.accounts = [];
         if(!APP.state.auditLog) APP.state.auditLog = [];
-        localStorage.setItem('sistunting_state', JSON.stringify(APP.state));
+        localStorage.setItem('zstunting_state', JSON.stringify(APP.state));
         if(APP.user && !silent){
-          toast('📥 Data cloud diperbarui','success');
+          toast('📥 Data diperbarui dari cloud','success');
           const active = document.querySelector('.nav-item.active')?.dataset.view || 'dashboard';
           showView(active, document.querySelector('.nav-item.active'));
           updateBadge();
         }
       }
-      this.setStatus('online'); this.lastSync = new Date();
+      this.setStatus('online');
     } catch(e){ console.error('Pull error:', e); this.setStatus('error'); }
-  },
-  async reset(){
-    APP.state = { cases:[], tpk:APP.state.tpk||[], auditLog:[{id:'R'+Date.now(), ts:new Date().toISOString(), user:APP.user.username, action:'RESET', detail:'Reset semua kasus'}] };
-    localStorage.setItem('sistunting_state', JSON.stringify(APP.state));
-    if(_sbClient){
-      const {error} = await _sbClient.from('sistunting_state').update({ data: APP.state, updated_at: new Date().toISOString() }).eq('id','main');
-      if(error){ toast('❌ Cloud error: '+error.message,'error'); return false; }
-    }
-    return true;
   },
   setStatus(s){ this.status = s; this.updateIndicator(); },
   updateIndicator(){
@@ -334,35 +308,51 @@ async function manualSync(){
 /* ==================== LOGIN ==================== */
 async function doLogin(e){
   e.preventDefault();
-  const u = document.getElementById('username').value.trim();
+  const u = document.getElementById('username').value.trim().toLowerCase();
   const p = document.getElementById('password').value;
-  if(!USERS[u] || USERS[u].pass !== p){ toast('Username/password salah!','error'); return; }
-  APP.user = {username:u, ...USERS[u]};
-  showLoading('Menghubungkan ke Cloud...');
+  if(!u || !p){ toast('Isi username & password','error'); return; }
+  showLoading('Memverifikasi...');
   
   try {
     if(!_sbClient) _sbClient = supabase.createClient(CLOUD_URL, CLOUD_KEY);
     const {data, error} = await _sbClient.from('sistunting_state').select('*').eq('id','main').maybeSingle();
     if(error) throw error;
     
-    if(data && data.data){
-      APP.state = data.data;
-      if(!APP.state.cases) APP.state.cases = [];
-      if(!APP.state.tpk) APP.state.tpk = [];
-      if(!APP.state.auditLog) APP.state.auditLog = [];
-      localStorage.setItem('sistunting_state', JSON.stringify(APP.state));
+    let state = data?.data || { cases:[], tpk:[], accounts:[], auditLog:[] };
+    if(!state.cases) state.cases = [];
+    if(!state.tpk) state.tpk = [];
+    if(!state.accounts) state.accounts = [];
+    if(!state.auditLog) state.auditLog = [];
+    
+    // Cek admin
+    if(u === ADMIN_USER.username && p === ADMIN_USER.password){
+      APP.user = { username:u, nama:ADMIN_USER.nama, role:'admin', avatar:'PK' };
     } else {
-      APP.state = { cases:[], tpk:[], auditLog:[], savedAt:new Date().toISOString() };
-      localStorage.setItem('sistunting_state', JSON.stringify(APP.state));
-      await _sbClient.from('sistunting_state').upsert({ id:'main', data: APP.state, updated_at:new Date().toISOString() });
+      // Cek kader dari accounts
+      const acc = state.accounts.find(a => a.username === u);
+      if(!acc || acc.password !== p){ hideLoading(); toast('Username/password salah!','error'); return; }
+      const team = state.tpk.find(t => t.teamId === acc.teamId);
+      if(!team){ hideLoading(); toast('Tim tidak ditemukan','error'); return; }
+      APP.user = {
+        username:u, nama:`Tim ${team.tim} · ${team.desa}`, role:'kader',
+        avatar:'TPK', teamId: acc.teamId,
+        teamInfo: team
+      };
     }
+    
+    APP.state = state;
+    localStorage.setItem('zstunting_state', JSON.stringify(state));
   } catch(err){
     console.warn('Cloud error:', err);
-    const local = localStorage.getItem('sistunting_state');
-    APP.state = local ? JSON.parse(local) : { cases:[], tpk:[], auditLog:[] };
-    if(!APP.state.cases) APP.state.cases = [];
-    if(!APP.state.tpk) APP.state.tpk = [];
-    toast('⚠️ Mode offline','warning');
+    const local = localStorage.getItem('zstunting_state');
+    APP.state = local ? JSON.parse(local) : { cases:[], tpk:[], accounts:[], auditLog:[] };
+    if(u === ADMIN_USER.username && p === ADMIN_USER.password){
+      APP.user = { username:u, nama:ADMIN_USER.nama, role:'admin', avatar:'PK' };
+    } else {
+      hideLoading();
+      toast('Koneksi error, coba lagi','error');
+      return;
+    }
   }
   
   hideLoading();
@@ -370,35 +360,55 @@ async function doLogin(e){
   document.getElementById('appView').style.display = 'block';
   Cloud.init();
   initApp();
-  toast('Selamat datang, ' + APP.user.nama,'success');
+  toast(`Selamat datang, ${APP.user.nama}`,'success');
 }
 
 function logout(){
-  if(confirm('Keluar?')){
+  if(confirm('Keluar dari Z-STUNTING?')){
     saveState();
     APP.user = null;
     document.getElementById('appView').style.display = 'none';
     document.getElementById('loginView').style.display = 'flex';
+    document.getElementById('username').value = '';
+    document.getElementById('password').value = '';
   }
 }
 
 function saveState(){
   APP.state.savedAt = new Date().toISOString();
-  localStorage.setItem('sistunting_state', JSON.stringify(APP.state));
+  localStorage.setItem('zstunting_state', JSON.stringify(APP.state));
   Cloud.push();
 }
 
 /* ==================== INIT ==================== */
 function initApp(){
-  document.getElementById('userBox').innerHTML = `<div class="avatar">${APP.user.avatar}</div><div class="info"><div class="name">${APP.user.nama}</div><div class="role">${APP.user.role}</div></div>`;
+  document.getElementById('userBox').innerHTML = `<div class="avatar">${APP.user.avatar}</div><div class="info"><div class="name">${esc(APP.user.nama)}</div><div class="role">${APP.user.role === 'admin' ? 'Penyuluh KB' : 'Kader TPK'}</div></div>`;
+  
+  // Tampilkan menu admin hanya untuk admin
+  const isAdmin = APP.user.role === 'admin';
+  document.getElementById('navAdmin').style.display = isAdmin ? '' : 'none';
+  document.getElementById('navTPK').style.display = isAdmin ? '' : 'none';
+  document.getElementById('navProgress').style.display = isAdmin ? '' : 'none';
+  document.getElementById('navAkun').style.display = isAdmin ? '' : 'none';
+  document.getElementById('navPengaturan').style.display = isAdmin ? '' : 'none';
+  
   document.querySelectorAll('.nav-item').forEach(btn => { btn.onclick = () => showView(btn.dataset.view, btn); });
   updateBadge();
   showView('dashboard', document.querySelector('.nav-item[data-view="dashboard"]'));
 }
 
 function updateBadge(){
-  document.getElementById('badgeKasus').textContent = (APP.state.cases||[]).length;
+  const cases = visibleCases();
+  document.getElementById('badgeKasus').textContent = cases.length;
   document.getElementById('badgeTPK').textContent = (APP.state.tpk||[]).length;
+}
+
+// Filter kasus berdasarkan role
+function visibleCases(){
+  const all = APP.state.cases || [];
+  if(APP.user?.role === 'admin') return all;
+  if(APP.user?.teamId) return all.filter(c => c.team_id === APP.user.teamId);
+  return [];
 }
 
 function showView(view, btn){
@@ -407,23 +417,25 @@ function showView(view, btn){
   document.getElementById('sidebar').classList.remove('open');
   const titles = {
     dashboard:['Dashboard','Ringkasan status stunting'],
-    kasus:['Data Kasus BNBA','By Name By Address'],
+    kasus:['Data Kasus BNBA', APP.user?.role === 'admin' ? 'Semua kasus' : 'Kasus tim Anda'],
     kunjungan:['Kunjungan Saya','Kasus yang harus didampingi'],
-    tpk:['Data TPK','Tim Pendamping Keluarga'],
-    progress:['Progress Tim','Kinerja per Tim'],
+    tpk:['Semua TPK','309 Tim Pendamping Keluarga'],
+    progress:['Progress Tim','Kinerja semua tim'],
+    akun:['Kelola Akun','Akun kader TPK'],
+    profil:['Akun Saya','Info akun & ganti password'],
     pengaturan:['Pengaturan','Import & Backup']
   };
   const t = titles[view] || ['Menu',''];
   document.getElementById('pageTitle').textContent = t[0];
   document.getElementById('pageCrumb').textContent = t[1];
   const c = document.getElementById('content');
-  const R = { dashboard:renderDashboard, kasus:renderKasus, kunjungan:renderKunjungan, tpk:renderTPK, progress:renderProgress, pengaturan:renderPengaturan };
+  const R = { dashboard:renderDashboard, kasus:renderKasus, kunjungan:renderKunjungan, tpk:renderTPK, progress:renderProgress, akun:renderAkun, profil:renderProfil, pengaturan:renderPengaturan };
   R[view]?.(c);
 }
 
 /* ==================== DASHBOARD ==================== */
 function renderDashboard(c){
-  const cases = APP.state.cases || [];
+  const cases = visibleCases();
   const total = cases.length;
   const byGizi = {Stunting:0,'Gizi Kurang':0,'Gizi Buruk':0,Ideal:0};
   const byPend = {'Belum Dikunjungi':0,'Sudah Dikunjungi':0,'Dalam Pendampingan':0,Graduated:0};
@@ -437,21 +449,17 @@ function renderDashboard(c){
   
   c.innerHTML = `
     <div class="stats-grid">
-      <div class="stat-card"><div class="icon" style="background:var(--danger-light);color:var(--danger)">👶</div><div class="label">Total Kasus</div><div class="value">${fmtNum(total)}</div><div class="sub">Prevalensi 15,98%</div></div>
-      <div class="stat-card"><div class="icon" style="background:var(--warning-light);color:var(--warning)">🎯</div><div class="label">Didampingi</div><div class="value">${fmtNum(totalPend)}</div><div class="sub">${pctPend}% dari total</div></div>
-      <div class="stat-card"><div class="icon" style="background:var(--info-light);color:var(--info)">👥</div><div class="label">Tim TPK</div><div class="value">${fmtNum((APP.state.tpk||[]).length)}</div><div class="sub">Siap mendampingi</div></div>
-      <div class="stat-card"><div class="icon" style="background:var(--success-light);color:var(--success)">✅</div><div class="label">Graduated</div><div class="value">${fmtNum(byPend.Graduated)}</div><div class="sub">Keluar dari kasus</div></div>
+      <div class="stat-card"><div class="icon" style="background:var(--danger-light);color:var(--danger)">👶</div><div class="label">Total Kasus ${APP.user.role==='admin'?'Kabupaten':'Tim'}</div><div class="value">${fmtNum(total)}</div></div>
+      <div class="stat-card"><div class="icon" style="background:var(--warning-light);color:var(--warning)">🎯</div><div class="label">Didampingi</div><div class="value">${fmtNum(totalPend)}</div><div class="sub">${pctPend}%</div></div>
+      <div class="stat-card"><div class="icon" style="background:var(--danger-light);color:var(--danger)">🩸</div><div class="label">Stunting</div><div class="value">${fmtNum(byGizi.Stunting)}</div></div>
+      <div class="stat-card"><div class="icon" style="background:var(--success-light);color:var(--success)">✅</div><div class="label">Graduated</div><div class="value">${fmtNum(byPend.Graduated)}</div></div>
     </div>
     ${total === 0 ? `
       <div class="card">
         <div class="empty">
           <div class="ic">📋</div>
-          <div style="font-size:16px;font-weight:600;color:var(--gray-700);margin-bottom:6px">Belum Ada Data Kasus</div>
-          <div style="font-size:13px;margin-bottom:16px">Mulai dari Pengaturan → Import CSV, atau tambah manual</div>
-          <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
-            <button class="btn btn-primary-solid" onclick="openAddNew()">➕ Tambah Balita</button>
-            <button class="btn btn-info" onclick="showView('pengaturan',document.querySelector('.nav-item[data-view=\\'pengaturan\\']'))">⚙️ Pengaturan</button>
-          </div>
+          <div style="font-size:16px;font-weight:600;color:var(--gray-700);margin-bottom:6px">Belum Ada Kasus</div>
+          <div style="font-size:13px">${APP.user.role === 'admin' ? 'Buka <b>Pengaturan</b> untuk Import CSV BNBA' : 'Tunggu admin assign kasus ke tim Anda'}</div>
         </div>
       </div>` : `
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px" class="dash-grid">
@@ -468,11 +476,7 @@ function renderDashboard(c){
         </div>
       </div>
       <div class="card">
-        <div class="card-header"><div><div class="card-title">📊 Progress</div></div></div>
-        <div style="margin-bottom:16px">
-          <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><span>Total</span><b>${pctPend}%</b></div>
-          <div class="pbar" style="height:12px"><div class="pbar-fill" style="width:${pctPend}%"></div></div>
-        </div>
+        <div class="card-header"><div><div class="card-title">📊 Progress Pendampingan</div></div></div>
         ${Object.entries(byPend).map(([k,v]) => {
           const pct = total ? Math.round(v/total*100) : 0;
           return `<div style="margin-bottom:12px">
@@ -487,18 +491,14 @@ function renderDashboard(c){
 
 /* ==================== KASUS ==================== */
 function getFilteredCases(){
-  let arr = APP.state.cases || [];
+  let arr = visibleCases();
   const f = APP.filters;
-  if(f.search){
-    const s = f.search.toLowerCase();
-    arr = arr.filter(x => (x.nama||'').toLowerCase().includes(s) || (x.nik||'').includes(s) || (x.alamat||'').toLowerCase().includes(s));
-  }
+  if(f.search){ const s = f.search.toLowerCase(); arr = arr.filter(x => (x.nama||'').toLowerCase().includes(s) || (x.nik||'').includes(s) || (x.desa||'').toLowerCase().includes(s)); }
   if(f.kecamatan) arr = arr.filter(x => x.kecamatan === f.kecamatan);
   if(f.status_gizi) arr = arr.filter(x => x.status_gizi === f.status_gizi);
   if(f.status_pendampingan) arr = arr.filter(x => x.status_pendampingan === f.status_pendampingan);
   return arr;
 }
-
 let _ft = null;
 function updateFilter(key,val){
   APP.filters[key] = val; APP.page = 1;
@@ -524,38 +524,36 @@ function renderKasus(c){
   c.innerHTML = `
     <div class="card">
       <div class="card-header">
-        <div><div class="card-title">📋 Database Kasus BNBA</div></div>
+        <div><div class="card-title">📋 Data Kasus BNBA</div></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn btn-primary-solid" onclick="openAddNew()">➕ Tambah</button>
+          ${APP.user.role === 'admin' ? '<button class="btn btn-primary-solid" onclick="openAddNew()">➕ Tambah</button>' : ''}
           <button class="btn btn-outline" onclick="exportCSV()">📤 Ekspor</button>
         </div>
       </div>
       <div class="filters">
-        <input type="text" id="filterSearch" placeholder="🔍 Cari..." value="${esc(APP.filters.search)}" oninput="updateFilter('search',this.value)">
-        <select onchange="updateFilter('kecamatan',this.value)"><option value="">Semua Kec.</option>${KECAMATAN.map(k=>`<option ${APP.filters.kecamatan===k?'selected':''}>${k}</option>`).join('')}</select>
-        <select onchange="updateFilter('status_gizi',this.value)"><option value="">Gizi</option>${['Stunting','Gizi Kurang','Gizi Buruk','Ideal'].map(g=>`<option ${APP.filters.status_gizi===g?'selected':''}>${g}</option>`).join('')}</select>
+        <input type="text" id="filterSearch" placeholder="🔍 Cari nama/NIK/desa..." value="${esc(APP.filters.search)}" oninput="updateFilter('search',this.value)">
+        ${APP.user.role === 'admin' ? `<select onchange="updateFilter('kecamatan',this.value)"><option value="">Semua Kec.</option>${KECAMATAN.map(k=>`<option ${APP.filters.kecamatan===k?'selected':''}>${k}</option>`).join('')}</select>` : ''}
+        <select onchange="updateFilter('status_gizi',this.value)"><option value="">Status Gizi</option>${['Stunting','Gizi Kurang','Gizi Buruk','Ideal'].map(g=>`<option ${APP.filters.status_gizi===g?'selected':''}>${g}</option>`).join('')}</select>
         <select onchange="updateFilter('status_pendampingan',this.value)"><option value="">Pendampingan</option>${['Belum Dikunjungi','Sudah Dikunjungi','Dalam Pendampingan','Graduated'].map(g=>`<option ${APP.filters.status_pendampingan===g?'selected':''}>${g}</option>`).join('')}</select>
         <button class="btn btn-outline" onclick="resetFilters()">🔄</button>
       </div>
       <div style="margin-bottom:12px;font-size:13px">Menampilkan <b>${pageData.length}</b> dari <b>${fmtNum(total)}</b></div>
-      ${total === 0 ? '<div class="empty"><div class="ic">📋</div><div>Belum ada data kasus</div><div style="margin-top:12px;font-size:12px">Buka <b>Pengaturan</b> untuk Import CSV</div></div>' : `
+      ${total === 0 ? '<div class="empty"><div class="ic">📋</div><div>Belum ada data kasus</div></div>' : `
       <div class="table-wrap">
         <table>
-          <thead><tr><th>#</th><th>Nama/NIK</th><th>Usia</th><th>Alamat</th><th>Gizi</th><th>Pendampingan</th><th>Tim</th><th>Aksi</th></tr></thead>
+          <thead><tr><th>#</th><th>Nama/NIK</th><th>Usia</th><th>Desa</th><th>Gizi</th><th>Pendampingan</th><th>Aksi</th></tr></thead>
           <tbody>
             ${pageData.map((x,i) => `
               <tr>
                 <td>${start+i+1}</td>
                 <td><div style="font-weight:600">${esc(x.nama)}</div><div style="font-size:11px;color:var(--gray-500)">${x.nik||'-'}</div></td>
                 <td>${x.usia_bulan||0} bln</td>
-                <td><div style="font-size:12px">${esc(x.desa||'-')}</div><div style="font-size:11px;color:var(--gray-500)">${esc(x.kecamatan||'-')}</div></td>
+                <td style="font-size:12px">${esc(x.desa||'-')}</td>
                 <td>${badgeGizi(x.status_gizi)}</td>
                 <td>${badgePend(x.status_pendampingan)}</td>
-                <td style="font-size:11.5px">${x.team_id?esc(teamLabel(x.team_id)):'-'}</td>
                 <td style="white-space:nowrap">
                   <button class="btn btn-sm btn-outline" onclick="openDetail('${x.id}')">👁</button>
                   <button class="btn btn-sm btn-info" onclick="openEdit('${x.id}')">✏️</button>
-                  <button class="btn btn-sm btn-danger" onclick="deleteCase('${x.id}')">🗑</button>
                 </td>
               </tr>`).join('')}
           </tbody>
@@ -576,29 +574,29 @@ function pageRange(cur, total){
   if(cur < total-2) r.push('...'); r.push(total); return r;
 }
 
-/* ==================== KUNJUNGAN SAYA ==================== */
+/* ==================== KUNJUNGAN ==================== */
 function renderKunjungan(c){
-  let myCases = (APP.state.cases||[]).filter(x => x.status_pendampingan !== 'Graduated');
-  const belum = (APP.state.cases||[]).filter(x => x.status_pendampingan==='Belum Dikunjungi');
-  const proses = (APP.state.cases||[]).filter(x => ['Dalam Pendampingan','Sudah Dikunjungi'].includes(x.status_pendampingan));
+  const my = visibleCases().filter(x => x.status_pendampingan !== 'Graduated');
+  const belum = visibleCases().filter(x => x.status_pendampingan==='Belum Dikunjungi');
+  const proses = visibleCases().filter(x => ['Dalam Pendampingan','Sudah Dikunjungi'].includes(x.status_pendampingan));
   c.innerHTML = `
     <div class="stats-grid">
-      <div class="stat-card"><div class="icon" style="background:var(--gray-100)">📋</div><div class="label">Total</div><div class="value">${fmtNum(myCases.length)}</div></div>
+      <div class="stat-card"><div class="icon" style="background:var(--gray-100)">📋</div><div class="label">Total</div><div class="value">${fmtNum(my.length)}</div></div>
       <div class="stat-card"><div class="icon" style="background:var(--danger-light);color:var(--danger)">⏳</div><div class="label">Belum</div><div class="value">${fmtNum(belum.length)}</div></div>
       <div class="stat-card"><div class="icon" style="background:var(--warning-light);color:var(--warning)">🔄</div><div class="label">Proses</div><div class="value">${fmtNum(proses.length)}</div></div>
     </div>
     <div class="card">
-      <div class="card-header"><div><div class="card-title">🏠 Daftar Kunjungan</div></div></div>
-      ${myCases.length === 0 ? '<div class="empty"><div class="ic">🎉</div><div>Belum ada kasus</div></div>' : `
+      <div class="card-header"><div><div class="card-title">🏠 Kasus untuk Dikunjungi</div></div></div>
+      ${my.length === 0 ? '<div class="empty"><div class="ic">🎉</div><div>Belum ada kasus</div></div>' : `
       <div class="table-wrap">
         <table>
           <thead><tr><th>#</th><th>Nama</th><th>Alamat</th><th>Gizi</th><th>Aksi</th></tr></thead>
           <tbody>
-            ${myCases.slice(0,50).map((x,i) => `
+            ${my.slice(0,50).map((x,i) => `
               <tr>
                 <td>${i+1}</td>
-                <td><div style="font-weight:600">${esc(x.nama)}</div></td>
-                <td style="font-size:12px">${esc(x.alamat||'-')}<br><span style="color:var(--gray-500)">${esc(x.desa||'-')}</span></td>
+                <td><div style="font-weight:600">${esc(x.nama)}</div><div style="font-size:11px;color:var(--gray-500)">${x.usia_bulan||0} bln</div></td>
+                <td style="font-size:12px">${esc(x.desa||'-')}</td>
                 <td>${badgeGizi(x.status_gizi)}</td>
                 <td style="white-space:nowrap">
                   <button class="btn btn-sm btn-primary-solid" onclick="openKunjungan('${x.id}')">🏠</button>
@@ -612,23 +610,21 @@ function renderKunjungan(c){
     </div>`;
 }
 
-/* ==================== TPK ==================== */
+/* ==================== TPK (ADMIN) ==================== */
 function renderTPK(c){
   const tpk = APP.state.tpk || [];
-  const byKec = {};
-  tpk.forEach(t => { byKec[t.kecamatan] = (byKec[t.kecamatan]||0) + 1; });
   c.innerHTML = `
     <div class="stats-grid">
       <div class="stat-card"><div class="icon" style="background:var(--primary-light);color:var(--primary)">👥</div><div class="label">Total Tim</div><div class="value">${fmtNum(tpk.length)}</div></div>
       <div class="stat-card"><div class="icon" style="background:var(--info-light);color:var(--info)">🧑‍⚕️</div><div class="label">Total Personel</div><div class="value">${fmtNum(tpk.length * 3)}</div></div>
-      <div class="stat-card"><div class="icon" style="background:var(--warning-light);color:var(--warning)">🗺️</div><div class="label">Kecamatan</div><div class="value">${Object.keys(byKec).length}</div></div>
+      <div class="stat-card"><div class="icon" style="background:var(--warning-light);color:var(--warning)">🗺️</div><div class="label">Kecamatan</div><div class="value">${new Set(tpk.map(t=>t.kecamatan)).size}</div></div>
       <div class="stat-card"><div class="icon" style="background:var(--success-light);color:var(--success)">🏘️</div><div class="label">Desa</div><div class="value">${new Set(tpk.map(t=>t.desa)).size}</div></div>
     </div>
     <div class="card">
-      <div class="card-header"><div><div class="card-title">👥 Daftar Tim TPK</div></div></div>
-      ${tpk.length === 0 ? '<div class="empty"><div class="ic">👥</div><div>Belum ada data TPK</div><div style="font-size:12px;margin-top:8px">Buka <b>Pengaturan → Import TPK</b></div></div>' : `
+      <div class="card-header"><div><div class="card-title">👥 Semua Tim TPK</div></div></div>
+      ${tpk.length === 0 ? '<div class="empty"><div class="ic">👥</div><div>Belum ada data TPK</div></div>' : `
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px">
-        ${tpk.slice(0,60).map(t => `
+        ${tpk.slice(0,80).map(t => `
           <div class="team-card">
             <div class="team-header">
               <div class="team-title">Tim ${t.tim} · ${esc(t.desa)}</div>
@@ -639,34 +635,31 @@ function renderTPK(c){
             <div class="member kb"><div class="ic">👨‍👩‍👧</div><div><div style="font-weight:600">${esc(t.kb?.nama||'-')}</div><div style="font-size:10.5px;color:var(--gray-500)">Kader KB</div></div></div>
           </div>`).join('')}
       </div>
-      ${tpk.length > 60 ? `<div style="text-align:center;padding:12px;color:var(--gray-500);font-size:12px">60 dari ${tpk.length} tim</div>`:''}`}
+      ${tpk.length > 80 ? `<div style="text-align:center;padding:12px;color:var(--gray-500);font-size:12px">80 dari ${tpk.length} tim</div>`:''}`}
     </div>`;
 }
 
-/* ==================== PROGRESS TIM ==================== */
+/* ==================== PROGRESS ==================== */
 function renderProgress(c){
   const stat = {};
-  (APP.state.tpk||[]).forEach(t => { stat[t.teamId] = {t, total:0, belum:0, proses:0, grad:0}; });
+  (APP.state.tpk||[]).forEach(t => { stat[t.teamId] = {t, total:0, grad:0}; });
   (APP.state.cases||[]).forEach(x => {
     if(x.team_id && stat[x.team_id]){
       stat[x.team_id].total++;
-      if(x.status_pendampingan==='Belum Dikunjungi') stat[x.team_id].belum++;
-      else if(x.status_pendampingan==='Graduated') stat[x.team_id].grad++;
-      else stat[x.team_id].proses++;
+      if(x.status_pendampingan==='Graduated') stat[x.team_id].grad++;
     }
   });
   const list = Object.values(stat).sort((a,b) => b.total - a.total);
   c.innerHTML = `
     <div class="card">
-      <div class="card-header"><div><div class="card-title">📊 Kinerja Tim TPK</div></div></div>
-      ${list.length === 0 ? '<div class="empty"><div class="ic">👥</div><div>Belum ada data</div></div>' : `
+      <div class="card-header"><div><div class="card-title">📊 Kinerja Tim</div></div></div>
+      ${list.length === 0 ? '<div class="empty">Belum ada data</div>' : `
       <div class="table-wrap">
         <table>
-          <thead><tr><th>#</th><th>Tim</th><th>Desa</th><th>Kec.</th><th>Total</th><th>Progress</th><th>Belum</th><th>Grad</th></tr></thead>
+          <thead><tr><th>#</th><th>Tim</th><th>Desa</th><th>Kec.</th><th>Total</th><th>Progress</th><th>Grad</th></tr></thead>
           <tbody>
             ${list.map((s,i) => {
-              const selesai = s.proses + s.grad;
-              const pct = s.total ? Math.round(selesai/s.total*100) : 0;
+              const pct = s.total ? Math.round(s.grad/s.total*100) : 0;
               return `<tr>
                 <td>${i+1}</td>
                 <td><b>Tim ${s.t.tim}</b></td>
@@ -674,10 +667,9 @@ function renderProgress(c){
                 <td style="font-size:12px">${esc(s.t.kecamatan)}</td>
                 <td>${s.total}</td>
                 <td style="min-width:150px">
-                  <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px"><span>${pct}%</span><span>${selesai}/${s.total}</span></div>
+                  <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px"><span>${pct}%</span></div>
                   <div class="pbar"><div class="pbar-fill" style="width:${pct}%"></div></div>
                 </td>
-                <td>${s.belum}</td>
                 <td><span class="badge badge-success">${s.grad}</span></td>
               </tr>`;
             }).join('')}
@@ -687,67 +679,169 @@ function renderProgress(c){
     </div>`;
 }
 
+/* ==================== KELOLA AKUN (ADMIN) ==================== */
+function renderAkun(c){
+  const accounts = APP.state.accounts || [];
+  const tpk = APP.state.tpk || [];
+  c.innerHTML = `
+    <div class="card">
+      <div class="card-header">
+        <div><div class="card-title">🔑 Akun Kader TPK</div><div class="card-sub">${accounts.length} akun dari ${tpk.length} tim</div></div>
+        <button class="btn btn-primary-solid" onclick="generateAllAccounts()">⚡ Generate Semua Akun</button>
+      </div>
+      <div class="hint">
+        <b>Cara pakai:</b><br>
+        1. Pastikan Data TPK sudah diimport (menu Pengaturan)<br>
+        2. Klik <b>Generate Semua Akun</b> → otomatis buat ${tpk.length} akun<br>
+        3. Kirim username & password ke bidan tiap tim<br>
+        4. Username format: <i>kecamatan-desa-tim</i> · Password default: <b>zstunting</b>
+      </div>
+      ${accounts.length === 0 ? '<div class="empty"><div class="ic">🔑</div><div>Belum ada akun. Klik Generate Semua Akun.</div></div>' : `
+      <div class="table-wrap" style="margin-top:16px;max-height:500px;overflow-y:auto">
+        <table>
+          <thead><tr><th>#</th><th>Username</th><th>Password</th><th>Tim</th><th>Kecamatan</th></tr></thead>
+          <tbody>
+            ${accounts.map((a,i) => {
+              const t = tpk.find(x => x.teamId === a.teamId);
+              return `<tr>
+                <td>${i+1}</td>
+                <td style="font-family:monospace;font-weight:600">${esc(a.username)}</td>
+                <td style="font-family:monospace">${esc(a.password)}</td>
+                <td>${t ? 'Tim ' + t.tim + ' · ' + esc(t.desa) : '-'}</td>
+                <td>${t ? esc(t.kecamatan) : '-'}</td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+      <div style="margin-top:16px"><button class="btn btn-info" onclick="exportAccountsCSV()">📤 Ekspor Semua Akun ke CSV</button></div>`}
+    </div>`;
+}
+
+function generateAllAccounts(){
+  const tpk = APP.state.tpk || [];
+  if(tpk.length === 0){ toast('Import Data TPK dulu di Pengaturan','warning'); return; }
+  if(!confirm(`Generate ${tpk.length} akun untuk semua tim TPK?\nAkun lama akan diganti.`)) return;
+  const accounts = tpk.map(t => ({
+    username: generateUsername(t),
+    password: DEFAULT_PASS,
+    teamId: t.teamId
+  }));
+  APP.state.accounts = accounts;
+  saveState();
+  toast(`✅ ${accounts.length} akun berhasil dibuat`,'success');
+  renderAkun(document.getElementById('content'));
+}
+
+function exportAccountsCSV(){
+  const accounts = APP.state.accounts || [];
+  const tpk = APP.state.tpk || [];
+  const headers = ['username','password','kecamatan','desa','tim','bidan','hp_bidan'];
+  const rows = accounts.map(a => {
+    const t = tpk.find(x => x.teamId === a.teamId);
+    return [a.username, a.password, t?.kecamatan||'', t?.desa||'', t?.tim||'', t?.bidan?.nama||'', t?.bidan?.hp||''];
+  });
+  const csv = [headers, ...rows].map(r => r.map(v => `"${String(v||'').replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob(['\ufeff' + csv], {type:'text/csv;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `ZSTUNTING_Akun_TPK_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click(); URL.revokeObjectURL(url);
+  toast('✅ CSV akun diunduh','success');
+}
+
+/* ==================== PROFIL (Akun Saya) ==================== */
+function renderProfil(c){
+  const isAdmin = APP.user.role === 'admin';
+  c.innerHTML = `
+    <div class="card">
+      <div class="card-header"><div><div class="card-title">👤 Akun Saya</div></div></div>
+      <div class="info-grid">
+        <div class="info-row"><span class="lbl">Username</span><span class="val">${esc(APP.user.username)}</span></div>
+        <div class="info-row"><span class="lbl">Nama</span><span class="val">${esc(APP.user.nama)}</span></div>
+        <div class="info-row"><span class="lbl">Role</span><span class="val">${isAdmin ? 'Penyuluh KB (Admin)' : 'Kader TPK'}</span></div>
+        ${APP.user.teamInfo ? `
+          <div class="info-row"><span class="lbl">Kecamatan</span><span class="val">${esc(APP.user.teamInfo.kecamatan)}</span></div>
+          <div class="info-row"><span class="lbl">Desa</span><span class="val">${esc(APP.user.teamInfo.desa)}</span></div>
+          <div class="info-row"><span class="lbl">Tim</span><span class="val">Tim ${APP.user.teamInfo.tim}</span></div>
+          <div class="info-row"><span class="lbl">Bidan</span><span class="val">${esc(APP.user.teamInfo.bidan?.nama||'-')}</span></div>
+        ` : ''}
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><div><div class="card-title">🔒 Ganti Password</div></div></div>
+      <div class="form-group"><label>Password Lama</label><input type="password" id="oldPass"></div>
+      <div class="form-group"><label>Password Baru</label><input type="password" id="newPass" placeholder="Min. 6 karakter"></div>
+      <div class="form-group"><label>Konfirmasi Password Baru</label><input type="password" id="confirmPass"></div>
+      <button class="btn btn-primary-solid" onclick="changePassword()">💾 Simpan Password Baru</button>
+    </div>`;
+}
+
+function changePassword(){
+  const oldP = document.getElementById('oldPass').value;
+  const newP = document.getElementById('newPass').value;
+  const conf = document.getElementById('confirmPass').value;
+  if(!oldP || !newP){ toast('Isi semua kolom','error'); return; }
+  if(newP.length < 6){ toast('Password minimal 6 karakter','error'); return; }
+  if(newP !== conf){ toast('Konfirmasi tidak cocok','error'); return; }
+  
+  if(APP.user.role === 'admin'){
+    if(oldP !== ADMIN_USER.password){ toast('Password lama salah','error'); return; }
+    // Update admin password (in memory only — user harus update kode untuk permanen)
+    toast('⚠️ Admin password hanya bisa diubah via kode','warning');
+    return;
+  }
+  
+  const acc = (APP.state.accounts||[]).find(a => a.username === APP.user.username);
+  if(!acc){ toast('Akun tidak ditemukan','error'); return; }
+  if(acc.password !== oldP){ toast('Password lama salah','error'); return; }
+  acc.password = newP;
+  saveState();
+  toast('✅ Password berhasil diubah','success');
+  document.getElementById('oldPass').value = '';
+  document.getElementById('newPass').value = '';
+  document.getElementById('confirmPass').value = '';
+}
+
 /* ==================== PENGATURAN ==================== */
 function renderPengaturan(c){
-  const cases = (APP.state.cases||[]).length;
-  const tpk = (APP.state.tpk||[]).length;
   c.innerHTML = `
     <div class="card">
       <div class="card-header"><div><div class="card-title">📊 Status Data</div></div></div>
       <div class="stats-grid">
-        <div class="stat-card"><div class="label">Kasus BNBA</div><div class="value">${fmtNum(cases)}</div></div>
-        <div class="stat-card"><div class="label">Tim TPK</div><div class="value">${fmtNum(tpk)}</div></div>
+        <div class="stat-card"><div class="label">Kasus BNBA</div><div class="value">${fmtNum((APP.state.cases||[]).length)}</div></div>
+        <div class="stat-card"><div class="label">Tim TPK</div><div class="value">${fmtNum((APP.state.tpk||[]).length)}</div></div>
+        <div class="stat-card"><div class="label">Akun Kader</div><div class="value">${fmtNum((APP.state.accounts||[]).length)}</div></div>
       </div>
     </div>
     
     <div class="card">
-      <div class="card-header"><div><div class="card-title">📥 Import Data TPK (Excel)</div><div class="card-sub">Upload file Excel dari SK Bupati</div></div></div>
-      <div class="form-group">
-        <label>Pilih file Excel (.xlsx)</label>
-        <input type="file" id="excelTPK" accept=".xlsx,.xls">
-      </div>
+      <div class="card-header"><div><div class="card-title">📥 Import Data TPK (Excel)</div></div></div>
+      <div class="form-group"><label>Pilih file Excel SK Bupati</label><input type="file" id="excelTPK" accept=".xlsx,.xls"></div>
       <button class="btn btn-primary-solid" onclick="importTPKExcel()">📥 Import TPK dari Excel</button>
-      <div style="margin-top:12px;font-size:12px;color:var(--gray-500);line-height:1.6">
-        <b>Cara pakai:</b>
-        <ol style="padding-left:20px;margin-top:4px">
-          <li>Pilih file Excel <b>"Lampiran Nama-nama TPK"</b></li>
-          <li>Klik tombol Import</li>
-          <li>Tunggu sampai selesai — data TPK otomatis tersimpan</li>
-        </ol>
-      </div>
     </div>
     
     <div class="card">
       <div class="card-header"><div><div class="card-title">📥 Import Kasus BNBA (CSV)</div></div></div>
-      <div class="form-group">
-        <label>Pilih file CSV BNBA</label>
-        <input type="file" id="csvBNBA" accept=".csv,.txt">
-      </div>
+      <div class="form-group"><label>Pilih file CSV BNBA</label><input type="file" id="csvBNBA" accept=".csv,.txt"></div>
       <button class="btn btn-primary-solid" onclick="importBNBA()">📥 Import BNBA dari CSV</button>
-      <div style="margin-top:12px;font-size:12px;color:var(--gray-500);line-height:1.6">
-        <b>Format CSV (baris pertama header):</b>
-        <pre style="background:var(--gray-900);color:#a7f3d0;padding:10px;border-radius:8px;font-size:10.5px;overflow-x:auto;margin-top:6px">nik,no_kk,nama,jk,tgl_lahir,usia_bulan,nama_ibu,nama_ayah,alamat,desa,kecamatan,posyandu,hp_ortu,bb,tb,status_gizi</pre>
-      </div>
+      <div class="hint">Format: <code>nik,no_kk,nama,jk,tgl_lahir,usia_bulan,nama_ibu,nama_ayah,alamat,desa,kecamatan,posyandu,hp_ortu,bb,tb,status_gizi</code></div>
     </div>
     
     <div class="card">
       <div class="card-header"><div><div class="card-title">💾 Backup & Reset</div></div></div>
       <div style="display:flex;gap:10px;flex-wrap:wrap">
         <button class="btn btn-info" onclick="exportJSON()">📥 Ekspor Backup JSON</button>
-        <button class="btn btn-outline" onclick="exportCSV()">📤 Ekspor Kasus ke CSV</button>
+        <button class="btn btn-outline" onclick="exportCSV()">📤 Ekspor Kasus CSV</button>
         <button class="btn btn-warning" onclick="confirmReset()">🗑 Reset Semua Kasus</button>
       </div>
-      <div style="margin-top:12px;font-size:12px;color:var(--gray-500)">
-        ⚠️ <b>Reset</b> akan mengosongkan semua kasus BNBA (TPK tetap aman). Cocok kalau masih ada data dummy.
-      </div>
-    </div>
-  `;
+    </div>`;
 }
 
 /* ==================== DETAIL ==================== */
 function openDetail(id){
-  const x = (APP.state.cases||[]).find(c => c.id === id);
-  if(!x) return;
+  const x = visibleCases().find(c => c.id === id);
+  if(!x){ toast('Akses ditolak','error'); return; }
   APP.currentDetail = x;
   const team = x.team_id ? findTeam(x.team_id) : null;
   document.getElementById('detailBody').innerHTML = `
@@ -782,15 +876,15 @@ function openDetail(id){
     </div>`;
   document.getElementById('detailFooter').innerHTML = `
     <button class="btn btn-outline" onclick="closeModal('modalDetail')">Tutup</button>
+    <a class="wa-link" href="https://wa.me/62${(x.hp_ortu||'').replace(/^0/,'')}?text=${encodeURIComponent(`Assalamualaikum, saya Tim TPK ${x.desa||''}. Mengingatkan jadwal penimbangan ${x.nama} di Posyandu.`)}" target="_blank">💬 WA Ortu</a>
     <button class="btn btn-primary-solid" onclick="openKunjungan('${x.id}')">🏠 Kunjungan</button>
-    <button class="btn btn-info" onclick="openAssign('${x.id}')">👥 Tugaskan Tim</button>
     <button class="btn btn-warning" onclick="openEdit('${x.id}')">✏️ Edit</button>`;
   document.getElementById('modalDetail').classList.add('show');
 }
 
 /* ==================== KUNJUNGAN ==================== */
 function openKunjungan(id){
-  const x = (APP.state.cases||[]).find(c => c.id === id);
+  const x = visibleCases().find(c => c.id === id);
   if(!x) return;
   APP.currentKunjungan = x;
   closeModal('modalDetail');
@@ -810,7 +904,7 @@ function openKunjungan(id){
       <div class="form-group full"><label>Status Pendampingan</label>
         <select id="k_pend">${['Sudah Dikunjungi','Dalam Pendampingan','Graduated'].map(g=>`<option ${x.status_pendampingan===g?'selected':''}>${g}</option>`).join('')}</select>
       </div>
-      <div class="form-group full"><label>Catatan</label><textarea id="k_cat" rows="3"></textarea></div>
+      <div class="form-group full"><label>Catatan</label><textarea id="k_cat" rows="3" placeholder="Contoh: Ibu diberi edukasi MP-ASI..."></textarea></div>
     </div>`;
   document.getElementById('modalKunjungan').classList.add('show');
   hitungZ();
@@ -857,13 +951,14 @@ function saveKunjungan(){
 
 /* ==================== EDIT ==================== */
 function openAddNew(){
+  if(APP.user.role !== 'admin'){ toast('Hanya admin','error'); return; }
   APP.currentEdit = null;
   document.getElementById('editTitle').textContent = '➕ Tambah Balita';
-  document.getElementById('editBody').innerHTML = buildEditForm({nama:'',jk:'L',tgl_lahir:'',usia_bulan:0,alamat:'',desa:'',kecamatan:'',posyandu:'',hp_ortu:'',bb:'',tb:'',status_gizi:'Ideal',status_pendampingan:'Belum Dikunjungi'});
+  document.getElementById('editBody').innerHTML = buildEditForm({nama:'',jk:'L',tgl_lahir:'',usia_bulan:0,alamat:'',desa:'',kecamatan:'',hp_ortu:'',bb:'',tb:'',status_gizi:'Ideal',status_pendampingan:'Belum Dikunjungi'});
   document.getElementById('modalEdit').classList.add('show');
 }
 function openEdit(id){
-  const x = (APP.state.cases||[]).find(c => c.id === id);
+  const x = visibleCases().find(c => c.id === id);
   if(!x) return;
   APP.currentEdit = x;
   closeModal('modalDetail');
@@ -883,7 +978,7 @@ function buildEditForm(x){
       <div class="form-group"><label>Kecamatan *</label>
         <select id="e_kec"><option value="">- Pilih -</option>${KECAMATAN.map(k=>`<option ${x.kecamatan===k?'selected':''}>${k}</option>`).join('')}</select>
       </div>
-      <div class="form-group"><label>HP Ortu</label><input type="text" id="e_hp" value="${esc(x.hp_ortu||'')}" placeholder="08xxx"></div>
+      <div class="form-group"><label>HP Ortu</label><input type="text" id="e_hp" value="${esc(x.hp_ortu||'')}"></div>
       <div class="form-group"><label>BB (kg)</label><input type="number" step="0.1" id="e_bb" value="${x.bb||''}"></div>
       <div class="form-group"><label>TB (cm)</label><input type="number" step="0.1" id="e_tb" value="${x.tb||''}"></div>
       <div class="form-group"><label>Status Gizi</label>
@@ -921,7 +1016,6 @@ function saveEdit(){
   if(isNew){
     data.id = 'CS' + Date.now().toString(36).toUpperCase();
     data.nik = '730000' + Date.now().toString().slice(-10);
-    data.no_kk = data.nik;
     data.riwayat = []; data.tgl_ukur_terakhir = new Date().toISOString().slice(0,10);
     if(!APP.state.cases) APP.state.cases = [];
     APP.state.cases.push(data);
@@ -936,42 +1030,8 @@ function saveEdit(){
   const active = document.querySelector('.nav-item.active').dataset.view;
   showView(active, document.querySelector('.nav-item.active'));
 }
-function deleteCase(id){
-  const x = (APP.state.cases||[]).find(c => c.id === id);
-  if(!x) return;
-  if(!confirm(`Hapus "${x.nama}"?`)) return;
-  APP.state.cases = APP.state.cases.filter(c => c.id !== id);
-  saveState();
-  toast('🗑 Dihapus','success');
-  updateBadge();
-  const active = document.querySelector('.nav-item.active').dataset.view;
-  showView(active, document.querySelector('.nav-item.active'));
-}
 
-/* ==================== ASSIGN ==================== */
-function openAssign(id){
-  const x = (APP.state.cases||[]).find(c => c.id === id);
-  if(!x) return;
-  APP.currentAssign = x;
-  const teams = (APP.state.tpk||[]).filter(t => t.kecamatan === x.kecamatan);
-  document.getElementById('assignBody').innerHTML = `
-    <div class="form-group"><label>Pilih Tim TPK</label>
-      <select id="a_team"><option value="">- Belum ditugaskan -</option>${teams.map(t=>`<option value="${t.teamId}" ${x.team_id===t.teamId?'selected':''}>Tim ${t.tim} · ${esc(t.desa)}</option>`).join('')}</select>
-    </div>`;
-  document.getElementById('modalAssign').classList.add('show');
-}
-function saveAssign(){
-  const x = APP.currentAssign;
-  if(!x) return;
-  x.team_id = document.getElementById('a_team').value || null;
-  saveState();
-  closeModal('modalAssign'); closeModal('modalDetail');
-  toast('✅ Tim ditugaskan','success');
-  const active = document.querySelector('.nav-item.active').dataset.view;
-  showView(active, document.querySelector('.nav-item.active'));
-}
-
-/* ==================== IMPORT TPK EXCEL ==================== */
+/* ==================== IMPORT ==================== */
 async function importTPKExcel(){
   const f = document.getElementById('excelTPK').files[0];
   if(!f){ toast('Pilih file Excel dulu','warning'); return; }
@@ -992,10 +1052,7 @@ async function importTPKExcel(){
       if(/^\d+\s*orang$/i.test(nama)) continue;
       if(r[1] && String(r[1]).trim()) cKec = String(r[1]).trim().toUpperCase();
       if(r[2] && String(r[2]).trim()) cDesa = String(r[2]).trim();
-      if(r[3] && String(r[3]).trim()){
-        const m = String(r[3]).match(/(\d+)/);
-        if(m) cTim = parseInt(m[1]);
-      }
+      if(r[3] && String(r[3]).trim()){ const m = String(r[3]).match(/(\d+)/); if(m) cTim = parseInt(m[1]); }
       if(!cKec || !cDesa || !cTim) continue;
       const unsur = String(r[5]||'').trim().toLowerCase();
       const hp = String(r[6]||'').trim().replace(/['\s\.]/g,'');
@@ -1010,19 +1067,17 @@ async function importTPKExcel(){
       id: 'TPK'+String(i+1).padStart(4,'0'),
       teamId: 'TIM-'+t.kecamatan.replace(/\s/g,'')+'-'+t.desa.replace(/\s/g,'')+'-'+t.tim,
       kecamatan: t.kecamatan, desa: t.desa, tim: t.tim,
-      bidan: t.bidan || {nama:'-',hp:'-'},
-      pkk: t.pkk || {nama:'-',hp:'-'},
-      kb: t.kb || {nama:'-',hp:'-'},
-      jumlah_kasus: 0, selesai: 0
+      bidan: t.bidan || {nama:'-',hp:'-'}, pkk: t.pkk || {nama:'-',hp:'-'}, kb: t.kb || {nama:'-',hp:'-'}
     }));
-    if(tpkList.length === 0){ hideLoading(); toast('❌ Tidak ada data TPK di file','error'); return; }
-    if(!confirm(`Import ${tpkList.length} tim TPK?\nData TPK lama (${(APP.state.tpk||[]).length}) akan diganti.`)){ hideLoading(); return; }
+    if(tpkList.length === 0){ hideLoading(); toast('❌ Tidak ada data TPK','error'); return; }
+    if(!confirm(`Import ${tpkList.length} tim TPK?`)){ hideLoading(); return; }
     APP.state.tpk = tpkList;
-    // Re-assign kasus ke tim baru
     autoAssign();
+    // Auto-generate akun juga
+    APP.state.accounts = tpkList.map(t => ({ username:generateUsername(t), password:DEFAULT_PASS, teamId:t.teamId }));
     saveState();
     hideLoading();
-    toast(`✅ ${tpkList.length} Tim TPK diimport + kasus di-assign ulang`,'success');
+    toast(`✅ ${tpkList.length} tim + ${tpkList.length} akun dibuat`,'success');
     updateBadge();
     showView('tpk', document.querySelector('.nav-item[data-view="tpk"]'));
   } catch(e){
@@ -1031,7 +1086,6 @@ async function importTPKExcel(){
     toast('❌ Gagal parse: ' + e.message,'error');
   }
 }
-
 function autoAssign(){
   const groups = {};
   (APP.state.tpk||[]).forEach(t => {
@@ -1040,25 +1094,19 @@ function autoAssign(){
     groups[key].push(t);
   });
   const kecOnly = {};
-  (APP.state.tpk||[]).forEach(t => {
-    if(!kecOnly[t.kecamatan]) kecOnly[t.kecamatan] = [];
-    kecOnly[t.kecamatan].push(t);
-  });
+  (APP.state.tpk||[]).forEach(t => { if(!kecOnly[t.kecamatan]) kecOnly[t.kecamatan] = []; kecOnly[t.kecamatan].push(t); });
   const counters = {};
   (APP.state.tpk||[]).forEach(t => counters[t.teamId] = 0);
   (APP.state.cases||[]).forEach(c => {
     const kk = (c.kecamatan||'').toUpperCase();
     const kd = (c.desa||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
-    let pool = groups[kk+'||'+kd];
-    if(!pool || !pool.length) pool = kecOnly[kk];
+    let pool = groups[kk+'||'+kd] || kecOnly[kk];
     if(!pool || !pool.length){ c.team_id = null; return; }
     pool.sort((a,b) => counters[a.teamId] - counters[b.teamId]);
     c.team_id = pool[0].teamId;
     counters[pool[0].teamId]++;
   });
 }
-
-/* ==================== IMPORT BNBA CSV ==================== */
 function importBNBA(){
   const f = document.getElementById('csvBNBA').files[0];
   if(!f){ toast('Pilih file CSV dulu','warning'); return; }
@@ -1076,28 +1124,21 @@ function importBNBA(){
         else cur += ch;
       }
       vals.push(cur);
-      const o = {};
-      headers.forEach((h,i) => o[h] = (vals[i]||'').trim());
-      return o;
+      const o = {}; headers.forEach((h,i) => o[h] = (vals[i]||'').trim()); return o;
     });
     const cases = rows.map((r,i) => ({
       id: 'CS' + Date.now() + '_' + i,
-      nik: r.nik||'', no_kk: r.no_kk||'',
-      nama: r.nama||'', jk: r.jk||'L',
-      tgl_lahir: r.tgl_lahir||'',
-      usia_bulan: parseInt(r.usia_bulan)||0,
+      nik: r.nik||'', no_kk: r.no_kk||'', nama: r.nama||'', jk: r.jk||'L',
+      tgl_lahir: r.tgl_lahir||'', usia_bulan: parseInt(r.usia_bulan)||0,
       nama_ibu: r.nama_ibu||'', nama_ayah: r.nama_ayah||'',
-      alamat: r.alamat||'', desa: r.desa||'',
-      kecamatan: (r.kecamatan||'').toUpperCase(),
+      alamat: r.alamat||'', desa: r.desa||'', kecamatan: (r.kecamatan||'').toUpperCase(),
       posyandu: r.posyandu||'', hp_ortu: r.hp_ortu||'',
       bb: parseFloat(r.bb)||0, tb: parseFloat(r.tb)||0,
-      status_gizi: r.status_gizi||'Ideal',
-      status_pendampingan: 'Belum Dikunjungi',
-      team_id: null, riwayat: [],
-      tgl_ukur_terakhir: new Date().toISOString().slice(0,10)
+      status_gizi: r.status_gizi||'Ideal', status_pendampingan:'Belum Dikunjungi',
+      team_id:null, riwayat:[], tgl_ukur_terakhir: new Date().toISOString().slice(0,10)
     })).filter(c => c.nama);
     if(cases.length === 0){ toast('Tidak ada data valid','error'); return; }
-    if(!confirm(`Import ${cases.length} kasus?\nData lama (${(APP.state.cases||[]).length}) akan diganti.`)) return;
+    if(!confirm(`Import ${cases.length} kasus? Data lama (${(APP.state.cases||[]).length}) akan diganti.`)) return;
     APP.state.cases = cases;
     autoAssign();
     saveState();
@@ -1108,44 +1149,42 @@ function importBNBA(){
   reader.readAsText(f);
 }
 
-/* ==================== BACKUP & RESET ==================== */
+/* ==================== BACKUP ==================== */
 function exportJSON(){
   const blob = new Blob([JSON.stringify(APP.state)], {type:'application/json'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url; a.download = `SISTUNTING_backup_${new Date().toISOString().slice(0,10)}.json`;
+  a.href = url; a.download = `ZSTUNTING_backup_${new Date().toISOString().slice(0,10)}.json`;
   a.click(); URL.revokeObjectURL(url);
   toast('✅ Backup diunduh','success');
 }
 function exportCSV(){
   const arr = APP.state.cases || [];
-  const headers = ['nik','no_kk','nama','jk','tgl_lahir','usia_bulan','nama_ibu','nama_ayah','alamat','desa','kecamatan','posyandu','hp_ortu','bb','tb','status_gizi','status_pendampingan','tim'];
-  const rows = arr.map(x => [x.nik,x.no_kk,x.nama,x.jk,x.tgl_lahir,x.usia_bulan,x.nama_ibu,x.nama_ayah,x.alamat,x.desa,x.kecamatan,x.posyandu,x.hp_ortu,x.bb,x.tb,x.status_gizi,x.status_pendampingan,x.team_id?teamLabel(x.team_id):'']);
+  const headers = ['nik','no_kk','nama','jk','tgl_lahir','usia_bulan','nama_ibu','nama_ayah','alamat','desa','kecamatan','hp_ortu','bb','tb','status_gizi','status_pendampingan'];
+  const rows = arr.map(x => [x.nik,x.no_kk,x.nama,x.jk,x.tgl_lahir,x.usia_bulan,x.nama_ibu,x.nama_ayah,x.alamat,x.desa,x.kecamatan,x.hp_ortu,x.bb,x.tb,x.status_gizi,x.status_pendampingan]);
   const csv = [headers, ...rows].map(r => r.map(v => `"${String(v||'').replace(/"/g,'""')}"`).join(',')).join('\n');
   const blob = new Blob(['\ufeff' + csv], {type:'text/csv;charset=utf-8'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url; a.download = `BNBA_Jeneponto_${new Date().toISOString().slice(0,10)}.csv`;
+  a.href = url; a.download = `ZSTUNTING_Kasus_${new Date().toISOString().slice(0,10)}.csv`;
   a.click(); URL.revokeObjectURL(url);
   toast('✅ CSV diunduh','success');
 }
 function confirmReset(){
   document.getElementById('confirmTitle').textContent = '🗑 Reset Semua Kasus';
-  document.getElementById('confirmBody').innerHTML = `
-    <p>Anda akan <b>menghapus SEMUA kasus BNBA</b> dari website + Cloud.</p>
-    <p style="margin-top:8px;color:var(--success)">✅ Data TPK tetap aman (${(APP.state.tpk||[]).length} tim)</p>
-    <p style="margin-top:8px;color:var(--danger);font-weight:600">⚠️ Tindakan ini tidak bisa dibatalkan!</p>
-    <p style="margin-top:12px;font-size:12px;color:var(--gray-500)">Saran: klik "Ekspor Backup JSON" dulu sebelum reset.</p>`;
+  document.getElementById('confirmBody').innerHTML = `<p>Anda akan <b>menghapus SEMUA kasus BNBA</b> dari website + Cloud.</p>
+    <p style="margin-top:8px;color:var(--success)">✅ Data TPK & akun tetap aman</p>
+    <p style="margin-top:8px;color:var(--danger);font-weight:600">⚠️ Tidak bisa dibatalkan!</p>`;
   document.getElementById('confirmBtn').onclick = async () => {
     closeModal('modalConfirm');
-    showLoading('Menghapus data...');
-    const ok = await Cloud.reset();
+    showLoading('Menghapus...');
+    APP.state.cases = [];
+    APP.state.auditLog = [{id:'R'+Date.now(), ts:new Date().toISOString(), user:APP.user.username, action:'RESET', detail:'Reset kasus'}];
+    saveState();
     hideLoading();
-    if(ok){
-      toast('🗑 Semua kasus dihapus','success');
-      updateBadge();
-      showView('dashboard', document.querySelector('.nav-item[data-view="dashboard"]'));
-    }
+    toast('🗑 Semua kasus dihapus','success');
+    updateBadge();
+    showView('dashboard', document.querySelector('.nav-item[data-view="dashboard"]'));
   };
   document.getElementById('modalConfirm').classList.add('show');
 }
