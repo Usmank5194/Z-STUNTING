@@ -1,0 +1,1165 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SISTUNTING JENEPONTO</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif}
+:root{--primary:#059669;--primary-dark:#047857;--primary-light:#d1fae5;--danger:#dc2626;--danger-light:#fee2e2;--warning:#f59e0b;--warning-light:#fef3c7;--info:#0891b2;--info-light:#cffafe;--success:#16a34a;--success-light:#dcfce7;--gray-50:#f9fafb;--gray-100:#f3f4f6;--gray-200:#e5e7eb;--gray-300:#d1d5db;--gray-400:#9ca3af;--gray-500:#6b7280;--gray-700:#374151;--gray-900:#111827}
+body{background:var(--gray-50);color:var(--gray-900);font-size:14px;line-height:1.5}
+button{cursor:pointer;font-family:inherit}input,select,textarea{font-family:inherit;font-size:14px}
+#loadingOverlay{position:fixed;inset:0;background:rgba(255,255,255,.95);z-index:1000;display:none;align-items:center;justify-content:center;flex-direction:column;gap:16px}
+#loadingOverlay.show{display:flex}
+.spinner{width:50px;height:50px;border:4px solid var(--gray-200);border-top-color:var(--primary);border-radius:50%;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+#loginView{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#059669,#0891b2);padding:20px}
+.login-card{background:#fff;border-radius:20px;padding:40px;width:100%;max-width:440px;box-shadow:0 25px 50px rgba(0,0,0,.2)}
+.login-logo{text-align:center;margin-bottom:24px}
+.login-logo .icon{width:70px;height:70px;background:linear-gradient(135deg,#059669,#0891b2);border-radius:20px;display:inline-flex;align-items:center;justify-content:center;font-size:36px;margin-bottom:12px}
+.login-logo h1{font-size:22px;font-weight:700}.login-logo p{color:var(--gray-500);font-size:13px;margin-top:4px}
+.form-group{margin-bottom:16px}.form-group label{display:block;font-weight:600;margin-bottom:6px;font-size:13px;color:var(--gray-700)}
+.form-group input,.form-group select,.form-group textarea{width:100%;padding:11px 14px;border:1.5px solid var(--gray-300);border-radius:10px;outline:none}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(5,150,105,.1)}
+.btn-primary{width:100%;padding:12px;background:var(--primary);color:#fff;border:none;border-radius:10px;font-weight:600;font-size:15px}
+.btn-primary:hover{background:var(--primary-dark)}
+.demo-box{background:var(--gray-50);border:1px dashed var(--gray-300);border-radius:10px;padding:12px;margin-top:16px;font-size:12px;color:var(--gray-500)}
+.demo-box b{color:var(--gray-700)}.demo-box div{margin-top:4px}
+#appView{display:none}.app-layout{display:flex;min-height:100vh}
+.sidebar{width:260px;background:#fff;border-right:1px solid var(--gray-200);position:fixed;height:100vh;overflow-y:auto;z-index:50}
+.sidebar-header{padding:20px;border-bottom:1px solid var(--gray-200)}
+.sidebar-header .logo{display:flex;align-items:center;gap:10px}
+.sidebar-header .logo-icon{width:40px;height:40px;background:linear-gradient(135deg,#059669,#0891b2);border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px}
+.sidebar-header h2{font-size:15px;font-weight:700}.sidebar-header p{font-size:11px;color:var(--gray-500)}
+.sidebar-user{padding:14px 20px;background:var(--primary-light);border-bottom:1px solid var(--gray-200);display:flex;align-items:center;gap:10px}
+.avatar{width:38px;height:38px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px}
+.sidebar-user .info{font-size:12px}.sidebar-user .name{font-weight:600}.sidebar-user .role{color:var(--primary-dark);font-size:11px}
+.nav{padding:12px 10px}
+.nav-item{display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:10px;color:var(--gray-700);font-weight:500;margin-bottom:2px;border:none;background:transparent;width:100%;text-align:left;font-size:13.5px}
+.nav-item:hover{background:var(--gray-100)}.nav-item.active{background:var(--primary);color:#fff}
+.nav-item .ic{font-size:16px;width:20px;text-align:center}
+.nav-item .badge{margin-left:auto;background:var(--danger);color:#fff;font-size:10px;padding:2px 7px;border-radius:10px;font-weight:700}
+.nav-item.active .badge{background:rgba(255,255,255,.3)}
+.nav-section{padding:14px 20px 6px;font-size:10.5px;font-weight:700;color:var(--gray-400);text-transform:uppercase;letter-spacing:.8px}
+.main-content{margin-left:260px;flex:1;min-height:100vh}
+.topbar{background:#fff;border-bottom:1px solid var(--gray-200);padding:14px 28px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:40;flex-wrap:wrap;gap:8px}
+.topbar h1{font-size:18px;font-weight:700}.topbar .crumb{color:var(--gray-500);font-size:12px;margin-top:2px}
+.topbar-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.sync-status{font-size:11px;padding:5px 10px;border-radius:20px;background:var(--gray-100);color:var(--gray-500);display:inline-flex;align-items:center;gap:5px;cursor:pointer}
+.sync-status.online{background:var(--success-light);color:var(--success)}
+.sync-status.offline{background:var(--warning-light);color:#92400e}
+.sync-status.syncing{background:var(--info-light);color:var(--info)}
+.sync-status .dot{width:8px;height:8px;border-radius:50%;background:currentColor}
+.content{padding:24px 28px}
+.btn{padding:8px 14px;border-radius:8px;border:none;font-weight:600;font-size:13px;display:inline-flex;align-items:center;gap:6px}
+.btn-sm{padding:6px 11px;font-size:12px}.btn-primary-solid{background:var(--primary);color:#fff}
+.btn-primary-solid:hover{background:var(--primary-dark)}
+.btn-outline{background:#fff;border:1.5px solid var(--gray-300);color:var(--gray-700)}
+.btn-danger{background:var(--danger);color:#fff}.btn-warning{background:var(--warning);color:#fff}
+.btn-info{background:var(--info);color:#fff}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:20px}
+.stat-card{background:#fff;border-radius:14px;padding:18px;border:1px solid var(--gray-200)}
+.stat-card .icon{width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;margin-bottom:10px}
+.stat-card .label{font-size:12px;color:var(--gray-500);font-weight:500}
+.stat-card .value{font-size:26px;font-weight:700;margin-top:2px}
+.stat-card .sub{font-size:11px;color:var(--gray-500);margin-top:4px}
+.card{background:#fff;border-radius:14px;border:1px solid var(--gray-200);padding:20px;margin-bottom:20px}
+.card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--gray-100);flex-wrap:wrap;gap:10px}
+.card-title{font-size:15px;font-weight:700}.card-sub{font-size:12px;color:var(--gray-500);margin-top:2px}
+.table-wrap{overflow-x:auto;border-radius:10px;border:1px solid var(--gray-200)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead{background:var(--gray-50)}th{padding:11px 12px;text-align:left;font-weight:600;color:var(--gray-700);font-size:12px;white-space:nowrap;border-bottom:1px solid var(--gray-200)}
+td{padding:11px 12px;border-bottom:1px solid var(--gray-100);vertical-align:middle}
+.badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap}
+.badge-danger{background:var(--danger-light);color:var(--danger)}.badge-warning{background:var(--warning-light);color:#92400e}
+.badge-info{background:var(--info-light);color:var(--info)}.badge-success{background:var(--success-light);color:var(--success)}
+.badge-gray{background:var(--gray-100);color:var(--gray-500)}
+.filters{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+.filters input,.filters select{padding:9px 12px;border:1.5px solid var(--gray-300);border-radius:8px;font-size:13px;outline:none;background:#fff}
+.filters input[type=text]{flex:1;min-width:200px}
+.pagination{display:flex;align-items:center;justify-content:space-between;margin-top:14px;font-size:13px;color:var(--gray-500);flex-wrap:wrap;gap:10px}
+.pagination .pages{display:flex;gap:4px;flex-wrap:wrap}
+.pagination button{padding:6px 11px;border:1px solid var(--gray-300);background:#fff;border-radius:6px;font-size:12.5px}
+.pagination button.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.pagination button:disabled{opacity:.4}
+.pbar{height:8px;background:var(--gray-200);border-radius:10px;overflow:hidden;margin-top:6px}
+.pbar-fill{height:100%;background:var(--primary);border-radius:10px}
+.donut-wrap{display:flex;align-items:center;gap:24px;flex-wrap:wrap}
+.donut{width:150px;height:150px;border-radius:50%;position:relative;flex-shrink:0}
+.donut::after{content:'';position:absolute;inset:22%;background:#fff;border-radius:50%}
+.donut-label{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:2;flex-direction:column}
+.donut-label .num{font-size:24px;font-weight:700}.donut-label .txt{font-size:10.5px;color:var(--gray-500)}
+.legend{display:flex;flex-direction:column;gap:8px;font-size:13px}
+.legend-item{display:flex;align-items:center;gap:8px}
+.legend-dot{width:12px;height:12px;border-radius:3px;flex-shrink:0}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100;display:none;align-items:flex-start;justify-content:center;padding:30px 16px;overflow-y:auto}
+.modal-bg.show{display:flex}
+.modal{background:#fff;border-radius:16px;width:100%;max-width:720px;box-shadow:0 25px 50px rgba(0,0,0,.2)}
+.modal-header{padding:18px 24px;border-bottom:1px solid var(--gray-200);display:flex;align-items:center;justify-content:space-between}
+.modal-header h3{font-size:16px;font-weight:700}
+.modal-close{background:transparent;border:none;font-size:22px;color:var(--gray-400);width:32px;height:32px;border-radius:8px}
+.modal-body{padding:24px;max-height:70vh;overflow-y:auto}
+.modal-footer{padding:16px 24px;border-top:1px solid var(--gray-200);display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.form-grid .full{grid-column:1/-1}
+.chip-group{display:flex;flex-wrap:wrap;gap:8px}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border:1.5px solid var(--gray-300);border-radius:20px;font-size:12.5px;cursor:pointer;background:#fff}
+.chip input{display:none}
+.chip.checked{background:var(--primary-light);border-color:var(--primary);color:var(--primary-dark);font-weight:600}
+.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 24px;font-size:13px}
+.info-row{display:flex;gap:8px;padding:6px 0;border-bottom:1px dashed var(--gray-200)}
+.info-row .lbl{color:var(--gray-500);min-width:110px;flex-shrink:0}
+.info-row .val{font-weight:600;word-break:break-word}
+#toast{position:fixed;bottom:24px;right:24px;background:var(--gray-900);color:#fff;padding:12px 18px;border-radius:10px;font-size:13px;box-shadow:0 10px 25px rgba(0,0,0,.2);transform:translateY(100px);opacity:0;transition:.3s;z-index:200;max-width:340px}
+#toast.show{transform:translateY(0);opacity:1}
+#toast.success{background:var(--success)}#toast.error{background:var(--danger)}#toast.warning{background:var(--warning)}
+.empty{text-align:center;padding:40px 20px;color:var(--gray-500)}
+.empty .ic{font-size:44px;opacity:.3;margin-bottom:8px}
+.menu-toggle{display:none;background:#fff;border:1px solid var(--gray-300);border-radius:8px;padding:8px 10px;font-size:16px}
+.zscore-card{background:linear-gradient(135deg,#d1fae5,#cffafe);border-radius:12px;padding:14px;margin-top:10px}
+.zscore-card.warn{background:linear-gradient(135deg,#fef3c7,#fee2e2)}
+.zscore-card.bad{background:linear-gradient(135deg,#fee2e2,#fecaca)}
+.zscore-row{display:flex;justify-content:space-between;font-size:12.5px;padding:3px 0}
+.zscore-row b{font-family:monospace}
+.team-card{background:#fff;border:1px solid var(--gray-200);border-radius:12px;padding:16px;cursor:pointer}
+.team-card:hover{border-color:var(--primary)}
+.team-card .team-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.team-card .team-title{font-weight:700;color:var(--primary)}
+.team-card .member{display:flex;gap:10px;padding:6px 0;font-size:12.5px;align-items:center}
+.team-card .member .ic{width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0}
+.team-card .member.bidan .ic{background:var(--danger-light);color:var(--danger)}
+.team-card .member.pkk .ic{background:var(--warning-light);color:#92400e}
+.team-card .member.kb .ic{background:var(--info-light);color:var(--info)}
+.wa-link{display:inline-flex;align-items:center;gap:6px;padding:6px 11px;background:#25D366;color:#fff;border-radius:8px;text-decoration:none;font-size:12px;font-weight:600}
+@media(max-width:900px){.sidebar{transform:translateX(-100%);transition:.3s}.sidebar.open{transform:translateX(0)}.main-content{margin-left:0}.form-grid{grid-template-columns:1fr}.info-grid{grid-template-columns:1fr}.content{padding:16px}.topbar{padding:12px 16px}.menu-toggle{display:block}}
+</style>
+</head>
+<body>
+
+<div id="loadingOverlay"><div class="spinner"></div><div style="font-weight:600;color:var(--primary)" id="loadingText">Memuat...</div></div>
+
+<div id="loginView">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="icon">🏥</div>
+      <h1>SISTUNTING JENEPONTO</h1>
+      <p>Sistem Informasi Pemberantasan Stunting</p>
+    </div>
+    <form onsubmit="doLogin(event)">
+      <div class="form-group"><label>Username</label><input type="text" id="username" placeholder="Masukkan username" required></div>
+      <div class="form-group"><label>Password</label><input type="password" id="password" placeholder="Masukkan password" required></div>
+      <button type="submit" class="btn-primary">🔐 Masuk ke Sistem</button>
+    </form>
+    <div class="demo-box">
+      <b>🔑 Akun:</b>
+      <div>• admin / admin123</div>
+      <div>• penyuluh / penyuluh123</div>
+      <div>• kader / kader123</div>
+    </div>
+  </div>
+</div>
+
+<div id="appView">
+  <div class="app-layout">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header"><div class="logo"><div class="logo-icon">🏥</div><div><h2>SISTUNTING</h2><p>Kabupaten Jeneponto</p></div></div></div>
+      <div class="sidebar-user" id="userBox"></div>
+      <nav class="nav">
+        <div class="nav-section">Menu Utama</div>
+        <button class="nav-item active" data-view="dashboard"><span class="ic">📊</span> Dashboard</button>
+        <button class="nav-item" data-view="kasus"><span class="ic">👶</span> Data Kasus <span class="badge" id="badgeKasus">0</span></button>
+        <button class="nav-item" data-view="kunjungan"><span class="ic">🏠</span> Kunjungan Saya</button>
+        <div class="nav-section">Tim TPK</div>
+        <button class="nav-item" data-view="tpk"><span class="ic">👥</span> Data TPK <span class="badge" id="badgeTPK">0</span></button>
+        <button class="nav-item" data-view="progress"><span class="ic">📊</span> Progress Tim</button>
+        <div class="nav-section">Lainnya</div>
+        <button class="nav-item" data-view="pengaturan"><span class="ic">⚙️</span> Pengaturan</button>
+      </nav>
+      <div style="padding:16px 20px"><button class="btn btn-outline" style="width:100%" onclick="logout()">🚪 Keluar</button></div>
+    </aside>
+    <div class="main-content">
+      <div class="topbar">
+        <div style="display:flex;align-items:center;gap:12px">
+          <button class="menu-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button>
+          <div><h1 id="pageTitle">Dashboard</h1><div class="crumb" id="pageCrumb">Ringkasan</div></div>
+        </div>
+        <div class="topbar-actions">
+          <span class="sync-status" id="syncStatus" onclick="manualSync()"><span class="dot"></span> Cloud</span>
+        </div>
+      </div>
+      <div class="content" id="content"></div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="modalDetail"><div class="modal" style="max-width:820px"><div class="modal-header"><h3>📋 Detail Kasus</h3><button class="modal-close" onclick="closeModal('modalDetail')">×</button></div><div class="modal-body" id="detailBody"></div><div class="modal-footer" id="detailFooter"></div></div></div>
+<div class="modal-bg" id="modalEdit"><div class="modal" style="max-width:720px"><div class="modal-header"><h3 id="editTitle">✏️ Edit</h3><button class="modal-close" onclick="closeModal('modalEdit')">×</button></div><div class="modal-body" id="editBody"></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modalEdit')">Batal</button><button class="btn btn-primary-solid" onclick="saveEdit()">💾 Simpan</button></div></div></div>
+<div class="modal-bg" id="modalKunjungan"><div class="modal" style="max-width:780px"><div class="modal-header"><h3>🏠 Form Kunjungan</h3><button class="modal-close" onclick="closeModal('modalKunjungan')">×</button></div><div class="modal-body" id="kunjunganBody"></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modalKunjungan')">Batal</button><button class="btn btn-primary-solid" onclick="saveKunjungan()">💾 Simpan</button></div></div></div>
+<div class="modal-bg" id="modalAssign"><div class="modal" style="max-width:620px"><div class="modal-header"><h3>👥 Tugaskan ke Tim</h3><button class="modal-close" onclick="closeModal('modalAssign')">×</button></div><div class="modal-body" id="assignBody"></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modalAssign')">Batal</button><button class="btn btn-primary-solid" onclick="saveAssign()">💾 Simpan</button></div></div></div>
+<div class="modal-bg" id="modalConfirm"><div class="modal" style="max-width:520px"><div class="modal-header"><h3 id="confirmTitle">Konfirmasi</h3><button class="modal-close" onclick="closeModal('modalConfirm')">×</button></div><div class="modal-body" id="confirmBody"></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modalConfirm')">Batal</button><button class="btn btn-danger" id="confirmBtn">Ya, Lanjutkan</button></div></div></div>
+
+<div id="toast"></div>
+
+<script>
+/* ==================== CONFIG ==================== */
+const CLOUD_URL = 'https://gwiripziiwgumxymdmso.supabase.co';
+const CLOUD_KEY = 'sb_publishable_2UBNn2dU3qBJZLjgOm-FKA_hPUK7eUi';
+const KECAMATAN = ['ARUNGKEKE','BANGKALA','BANGKALA BARAT','BATANG','BINAMU','BONTORAMBA','KELARA','RUMBIA','TAMALATEA','TAROWANG','TURATEA'];
+const INTERVENSI_LIST = [
+  {id:'pmt',label:'PMT Pemulihan'},{id:'pkmk',label:'PKMK (Protein Hewani)'},
+  {id:'konseling',label:'Konseling Gizi'},{id:'asi',label:'Edukasi ASI Eksklusif'},
+  {id:'mpasi',label:'Edukasi MP-ASI'},{id:'rujukan',label:'Rujukan ke Faskes'},
+  {id:'vit_a',label:'Vitamin A'},{id:'obat_cacing',label:'Obat Cacing'},
+  {id:'sanitasi',label:'Perbaikan Sanitasi'},{id:'air_bersih',label:'Akses Air Bersih'},
+  {id:'imunisasi',label:'Imunisasi Lengkap'},{id:'kb',label:'KB Pasca Salin'}
+];
+const USERS = {
+  admin:{pass:'admin123',nama:'Administrator Dinkes',role:'Super Admin',avatar:'AD'},
+  puskesmas:{pass:'puskesmas123',nama:'Admin Puskesmas',role:'Admin Puskesmas',avatar:'PK'},
+  kader:{pass:'kader123',nama:'Kader TPK',role:'Kader TPK',avatar:'KD'},
+  penyuluh:{pass:'penyuluh123',nama:'Penyuluh KB Jeneponto',role:'Penyuluh KB',avatar:'KB'}
+};
+
+/* ==================== WHO Z-SCORE ==================== */
+const WHO = {
+  ages:[0,3,6,9,12,18,24,36,48,60],
+  BBU_M_MED:[3.3,6.4,7.9,8.9,9.6,10.9,12.2,14.3,16.3,18.3],BBU_M_SD:[0.5,0.8,0.9,0.9,1.0,1.1,1.3,1.5,1.8,2.1],
+  BBU_F_MED:[3.2,5.8,7.3,8.2,8.9,10.2,11.5,13.9,16.1,18.2],BBU_F_SD:[0.5,0.7,0.8,0.9,1.0,1.2,1.4,1.6,1.9,2.2],
+  TBU_M_MED:[49.9,61.4,67.6,72.0,75.7,82.3,87.8,96.1,103.3,110.0],TBU_M_SD:[1.9,2.1,2.3,2.4,2.5,2.8,3.0,3.5,4.0,4.5],
+  TBU_F_MED:[49.1,59.8,65.9,70.4,74.0,80.7,86.4,95.1,102.7,109.4],TBU_F_SD:[1.8,2.1,2.2,2.4,2.5,2.8,3.1,3.6,4.1,4.6],
+  interp(age,arr){const A=this.ages;if(age<=A[0])return arr[0];if(age>=A[A.length-1])return arr[arr.length-1];for(let i=0;i<A.length-1;i++){if(age>=A[i]&&age<=A[i+1]){const t=(age-A[i])/(A[i+1]-A[i]);return arr[i]+t*(arr[i+1]-arr[i]);}}return arr[arr.length-1];},
+  zBBU(bb,age,jk){const m=this.interp(age,jk==='L'?this.BBU_M_MED:this.BBU_F_MED);const s=this.interp(age,jk==='L'?this.BBU_M_SD:this.BBU_F_SD);return (bb-m)/s;},
+  zTBU(tb,age,jk){const m=this.interp(age,jk==='L'?this.TBU_M_MED:this.TBU_F_MED);const s=this.interp(age,jk==='L'?this.TBU_M_SD:this.TBU_F_SD);return (tb-m)/s;},
+  klasifikasi(zBBU,zTBU){if(zTBU<-2)return 'Stunting';if(zBBU<-3)return 'Gizi Buruk';if(zBBU<-2)return 'Gizi Kurang';return 'Ideal';}
+};
+
+/* ==================== APP STATE ==================== */
+const APP = {
+  user:null, state:{cases:[],tpk:[],auditLog:[]},
+  filters:{search:'',kecamatan:'',status_gizi:'',status_pendampingan:''},
+  page:1, pageSize:20,
+  currentDetail:null, currentEdit:null, currentKunjungan:null, currentAssign:null
+};
+let _sbClient = null;
+
+/* ==================== HELPERS ==================== */
+const esc = s => String(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmtNum = n => (n||0).toLocaleString('id-ID');
+const fmtDate = s => { if(!s) return '-'; return new Date(s).toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'}); };
+const findTeam = id => (APP.state.tpk||[]).find(t => t.teamId === id);
+const teamLabel = id => { const t = findTeam(id); return t ? `${t.desa} - Tim ${t.tim}` : '-'; };
+const badgeGizi = s => { const m={'Stunting':'badge-danger','Gizi Kurang':'badge-warning','Gizi Buruk':'badge-danger','Ideal':'badge-success'}; return `<span class="badge ${m[s]||'badge-gray'}">${s||'-'}</span>`; };
+const badgePend = s => { const m={'Belum Dikunjungi':'badge-gray','Sudah Dikunjungi':'badge-info','Dalam Pendampingan':'badge-warning','Graduated':'badge-success'}; return `<span class="badge ${m[s]||'badge-gray'}">${s||'-'}</span>`; };
+
+function toast(msg, type=''){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'show ' + type;
+  clearTimeout(t._tm); t._tm = setTimeout(()=>{ t.className=''; }, 3500);
+}
+function closeModal(id){ document.getElementById(id).classList.remove('show'); }
+function showLoading(t){ document.getElementById('loadingText').textContent = t||'Memuat...'; document.getElementById('loadingOverlay').classList.add('show'); }
+function hideLoading(){ document.getElementById('loadingOverlay').classList.remove('show'); }
+
+/* ==================== CLOUD ==================== */
+const Cloud = {
+  status:'local', lastSync:null, timer:null,
+  init(){
+    if(!_sbClient) _sbClient = supabase.createClient(CLOUD_URL, CLOUD_KEY);
+    this.status = 'online';
+    this.updateIndicator();
+    if(!this.timer) this.timer = setInterval(() => { if(APP.user) this.pull(true); }, 60000);
+  },
+  async push(){
+    if(!_sbClient) return;
+    try {
+      this.setStatus('syncing');
+      const {error} = await _sbClient.from('sistunting_state').upsert({ id:'main', data:APP.state, updated_at:new Date().toISOString() });
+      if(error) throw error;
+      this.lastSync = new Date(); this.setStatus('online');
+    } catch(e){ console.error('Push error:', e); this.setStatus('error'); }
+  },
+  async pull(silent = false){
+    if(!_sbClient) return;
+    try {
+      if(!silent) this.setStatus('syncing');
+      const {data, error} = await _sbClient.from('sistunting_state').select('*').eq('id','main').maybeSingle();
+      if(error) throw error;
+      if(!data || !data.data){ this.setStatus('online'); return; }
+      const cloudTime = new Date(data.updated_at);
+      const localTime = APP.state.savedAt ? new Date(APP.state.savedAt) : new Date(0);
+      if(cloudTime > localTime){
+        APP.state = data.data;
+        if(!APP.state.cases) APP.state.cases = [];
+        if(!APP.state.tpk) APP.state.tpk = [];
+        if(!APP.state.auditLog) APP.state.auditLog = [];
+        localStorage.setItem('sistunting_state', JSON.stringify(APP.state));
+        if(APP.user && !silent){
+          toast('📥 Data cloud diperbarui','success');
+          const active = document.querySelector('.nav-item.active')?.dataset.view || 'dashboard';
+          showView(active, document.querySelector('.nav-item.active'));
+          updateBadge();
+        }
+      }
+      this.setStatus('online'); this.lastSync = new Date();
+    } catch(e){ console.error('Pull error:', e); this.setStatus('error'); }
+  },
+  async reset(){
+    APP.state = { cases:[], tpk:APP.state.tpk||[], auditLog:[{id:'R'+Date.now(), ts:new Date().toISOString(), user:APP.user.username, action:'RESET', detail:'Reset semua kasus'}] };
+    localStorage.setItem('sistunting_state', JSON.stringify(APP.state));
+    if(_sbClient){
+      const {error} = await _sbClient.from('sistunting_state').update({ data: APP.state, updated_at: new Date().toISOString() }).eq('id','main');
+      if(error){ toast('❌ Cloud error: '+error.message,'error'); return false; }
+    }
+    return true;
+  },
+  setStatus(s){ this.status = s; this.updateIndicator(); },
+  updateIndicator(){
+    const el = document.getElementById('syncStatus');
+    if(!el) return;
+    const map = { online:['online','☁️ Cloud'], syncing:['syncing','🔄 Sync...'], error:['offline','⚠️ Error'], local:['','📱 Local'] };
+    const [cls, txt] = map[this.status] || map.local;
+    el.className = 'sync-status ' + cls;
+    el.innerHTML = '<span class="dot"></span> ' + txt;
+  }
+};
+
+async function manualSync(){
+  toast('🔄 Sinkronisasi...','');
+  await Cloud.pull(false);
+  if(Cloud.status === 'online') toast('✅ Tersinkron','success');
+}
+
+/* ==================== LOGIN ==================== */
+async function doLogin(e){
+  e.preventDefault();
+  const u = document.getElementById('username').value.trim();
+  const p = document.getElementById('password').value;
+  if(!USERS[u] || USERS[u].pass !== p){ toast('Username/password salah!','error'); return; }
+  APP.user = {username:u, ...USERS[u]};
+  showLoading('Menghubungkan ke Cloud...');
+  
+  try {
+    if(!_sbClient) _sbClient = supabase.createClient(CLOUD_URL, CLOUD_KEY);
+    const {data, error} = await _sbClient.from('sistunting_state').select('*').eq('id','main').maybeSingle();
+    if(error) throw error;
+    
+    if(data && data.data){
+      APP.state = data.data;
+      if(!APP.state.cases) APP.state.cases = [];
+      if(!APP.state.tpk) APP.state.tpk = [];
+      if(!APP.state.auditLog) APP.state.auditLog = [];
+      localStorage.setItem('sistunting_state', JSON.stringify(APP.state));
+    } else {
+      APP.state = { cases:[], tpk:[], auditLog:[], savedAt:new Date().toISOString() };
+      localStorage.setItem('sistunting_state', JSON.stringify(APP.state));
+      await _sbClient.from('sistunting_state').upsert({ id:'main', data: APP.state, updated_at:new Date().toISOString() });
+    }
+  } catch(err){
+    console.warn('Cloud error:', err);
+    const local = localStorage.getItem('sistunting_state');
+    APP.state = local ? JSON.parse(local) : { cases:[], tpk:[], auditLog:[] };
+    if(!APP.state.cases) APP.state.cases = [];
+    if(!APP.state.tpk) APP.state.tpk = [];
+    toast('⚠️ Mode offline','warning');
+  }
+  
+  hideLoading();
+  document.getElementById('loginView').style.display = 'none';
+  document.getElementById('appView').style.display = 'block';
+  Cloud.init();
+  initApp();
+  toast('Selamat datang, ' + APP.user.nama,'success');
+}
+
+function logout(){
+  if(confirm('Keluar?')){
+    saveState();
+    APP.user = null;
+    document.getElementById('appView').style.display = 'none';
+    document.getElementById('loginView').style.display = 'flex';
+  }
+}
+
+function saveState(){
+  APP.state.savedAt = new Date().toISOString();
+  localStorage.setItem('sistunting_state', JSON.stringify(APP.state));
+  Cloud.push();
+}
+
+/* ==================== INIT ==================== */
+function initApp(){
+  document.getElementById('userBox').innerHTML = `<div class="avatar">${APP.user.avatar}</div><div class="info"><div class="name">${APP.user.nama}</div><div class="role">${APP.user.role}</div></div>`;
+  document.querySelectorAll('.nav-item').forEach(btn => { btn.onclick = () => showView(btn.dataset.view, btn); });
+  updateBadge();
+  showView('dashboard', document.querySelector('.nav-item[data-view="dashboard"]'));
+}
+
+function updateBadge(){
+  document.getElementById('badgeKasus').textContent = (APP.state.cases||[]).length;
+  document.getElementById('badgeTPK').textContent = (APP.state.tpk||[]).length;
+}
+
+function showView(view, btn){
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  document.getElementById('sidebar').classList.remove('open');
+  const titles = {
+    dashboard:['Dashboard','Ringkasan status stunting'],
+    kasus:['Data Kasus BNBA','By Name By Address'],
+    kunjungan:['Kunjungan Saya','Kasus yang harus didampingi'],
+    tpk:['Data TPK','Tim Pendamping Keluarga'],
+    progress:['Progress Tim','Kinerja per Tim'],
+    pengaturan:['Pengaturan','Import & Backup']
+  };
+  const t = titles[view] || ['Menu',''];
+  document.getElementById('pageTitle').textContent = t[0];
+  document.getElementById('pageCrumb').textContent = t[1];
+  const c = document.getElementById('content');
+  const R = { dashboard:renderDashboard, kasus:renderKasus, kunjungan:renderKunjungan, tpk:renderTPK, progress:renderProgress, pengaturan:renderPengaturan };
+  R[view]?.(c);
+}
+
+/* ==================== DASHBOARD ==================== */
+function renderDashboard(c){
+  const cases = APP.state.cases || [];
+  const total = cases.length;
+  const byGizi = {Stunting:0,'Gizi Kurang':0,'Gizi Buruk':0,Ideal:0};
+  const byPend = {'Belum Dikunjungi':0,'Sudah Dikunjungi':0,'Dalam Pendampingan':0,Graduated:0};
+  cases.forEach(x => { if(byGizi[x.status_gizi]!==undefined) byGizi[x.status_gizi]++; if(byPend[x.status_pendampingan]!==undefined) byPend[x.status_pendampingan]++; });
+  const totalPend = total - byPend['Belum Dikunjungi'];
+  const pctPend = total ? Math.round(totalPend/total*100) : 0;
+  const pSt = total ? Math.round(byGizi.Stunting/total*100) : 0;
+  const pGK = total ? Math.round(byGizi['Gizi Kurang']/total*100) : 0;
+  const pGB = total ? Math.round(byGizi['Gizi Buruk']/total*100) : 0;
+  const donutBg = total ? `conic-gradient(#dc2626 0% ${pSt}%, #f59e0b ${pSt}% ${pSt+pGK}%, #b91c1c ${pSt+pGK}% ${pSt+pGK+pGB}%, #16a34a ${pSt+pGK+pGB}% 100%)` : '#e5e7eb';
+  
+  c.innerHTML = `
+    <div class="stats-grid">
+      <div class="stat-card"><div class="icon" style="background:var(--danger-light);color:var(--danger)">👶</div><div class="label">Total Kasus</div><div class="value">${fmtNum(total)}</div><div class="sub">Prevalensi 15,98%</div></div>
+      <div class="stat-card"><div class="icon" style="background:var(--warning-light);color:var(--warning)">🎯</div><div class="label">Didampingi</div><div class="value">${fmtNum(totalPend)}</div><div class="sub">${pctPend}% dari total</div></div>
+      <div class="stat-card"><div class="icon" style="background:var(--info-light);color:var(--info)">👥</div><div class="label">Tim TPK</div><div class="value">${fmtNum((APP.state.tpk||[]).length)}</div><div class="sub">Siap mendampingi</div></div>
+      <div class="stat-card"><div class="icon" style="background:var(--success-light);color:var(--success)">✅</div><div class="label">Graduated</div><div class="value">${fmtNum(byPend.Graduated)}</div><div class="sub">Keluar dari kasus</div></div>
+    </div>
+    ${total === 0 ? `
+      <div class="card">
+        <div class="empty">
+          <div class="ic">📋</div>
+          <div style="font-size:16px;font-weight:600;color:var(--gray-700);margin-bottom:6px">Belum Ada Data Kasus</div>
+          <div style="font-size:13px;margin-bottom:16px">Mulai dari Pengaturan → Import CSV, atau tambah manual</div>
+          <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+            <button class="btn btn-primary-solid" onclick="openAddNew()">➕ Tambah Balita</button>
+            <button class="btn btn-info" onclick="showView('pengaturan',document.querySelector('.nav-item[data-view=\\'pengaturan\\']'))">⚙️ Pengaturan</button>
+          </div>
+        </div>
+      </div>` : `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px" class="dash-grid">
+      <div class="card">
+        <div class="card-header"><div><div class="card-title">🍩 Distribusi Gizi</div></div></div>
+        <div class="donut-wrap">
+          <div class="donut" style="background:${donutBg}"><div class="donut-label"><div class="num">${fmtNum(total)}</div><div class="txt">Total</div></div></div>
+          <div class="legend">
+            <div class="legend-item"><span class="legend-dot" style="background:#dc2626"></span> Stunting <b style="margin-left:auto">${fmtNum(byGizi.Stunting)}</b></div>
+            <div class="legend-item"><span class="legend-dot" style="background:#f59e0b"></span> Gizi Kurang <b style="margin-left:auto">${fmtNum(byGizi['Gizi Kurang'])}</b></div>
+            <div class="legend-item"><span class="legend-dot" style="background:#b91c1c"></span> Gizi Buruk <b style="margin-left:auto">${fmtNum(byGizi['Gizi Buruk'])}</b></div>
+            <div class="legend-item"><span class="legend-dot" style="background:#16a34a"></span> Ideal <b style="margin-left:auto">${fmtNum(byGizi.Ideal)}</b></div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div><div class="card-title">📊 Progress</div></div></div>
+        <div style="margin-bottom:16px">
+          <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><span>Total</span><b>${pctPend}%</b></div>
+          <div class="pbar" style="height:12px"><div class="pbar-fill" style="width:${pctPend}%"></div></div>
+        </div>
+        ${Object.entries(byPend).map(([k,v]) => {
+          const pct = total ? Math.round(v/total*100) : 0;
+          return `<div style="margin-bottom:12px">
+            <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:4px"><span>${k}</span><b>${fmtNum(v)} (${pct}%)</b></div>
+            <div class="pbar"><div class="pbar-fill" style="width:${pct}%"></div></div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`}
+    <style>@media(max-width:900px){.dash-grid{grid-template-columns:1fr !important}}</style>`;
+}
+
+/* ==================== KASUS ==================== */
+function getFilteredCases(){
+  let arr = APP.state.cases || [];
+  const f = APP.filters;
+  if(f.search){
+    const s = f.search.toLowerCase();
+    arr = arr.filter(x => (x.nama||'').toLowerCase().includes(s) || (x.nik||'').includes(s) || (x.alamat||'').toLowerCase().includes(s));
+  }
+  if(f.kecamatan) arr = arr.filter(x => x.kecamatan === f.kecamatan);
+  if(f.status_gizi) arr = arr.filter(x => x.status_gizi === f.status_gizi);
+  if(f.status_pendampingan) arr = arr.filter(x => x.status_pendampingan === f.status_pendampingan);
+  return arr;
+}
+
+let _ft = null;
+function updateFilter(key,val){
+  APP.filters[key] = val; APP.page = 1;
+  if(_ft) clearTimeout(_ft);
+  _ft = setTimeout(() => {
+    const inp = document.getElementById('filterSearch');
+    const pos = inp ? inp.selectionStart : null;
+    renderKasus(document.getElementById('content'));
+    const inpNew = document.getElementById('filterSearch');
+    if(inpNew){ inpNew.focus(); if(pos!==null){ try{ inpNew.setSelectionRange(pos,pos); }catch(e){} } }
+  }, 400);
+}
+function resetFilters(){ APP.filters = {search:'',kecamatan:'',status_gizi:'',status_pendampingan:''}; APP.page = 1; renderKasus(document.getElementById('content')); }
+function gotoPage(p){ APP.page = p; renderKasus(document.getElementById('content')); }
+
+function renderKasus(c){
+  const filtered = getFilteredCases();
+  const total = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(total/APP.pageSize));
+  if(APP.page > totalPages) APP.page = 1;
+  const start = (APP.page-1)*APP.pageSize;
+  const pageData = filtered.slice(start, start+APP.pageSize);
+  c.innerHTML = `
+    <div class="card">
+      <div class="card-header">
+        <div><div class="card-title">📋 Database Kasus BNBA</div></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-primary-solid" onclick="openAddNew()">➕ Tambah</button>
+          <button class="btn btn-outline" onclick="exportCSV()">📤 Ekspor</button>
+        </div>
+      </div>
+      <div class="filters">
+        <input type="text" id="filterSearch" placeholder="🔍 Cari..." value="${esc(APP.filters.search)}" oninput="updateFilter('search',this.value)">
+        <select onchange="updateFilter('kecamatan',this.value)"><option value="">Semua Kec.</option>${KECAMATAN.map(k=>`<option ${APP.filters.kecamatan===k?'selected':''}>${k}</option>`).join('')}</select>
+        <select onchange="updateFilter('status_gizi',this.value)"><option value="">Gizi</option>${['Stunting','Gizi Kurang','Gizi Buruk','Ideal'].map(g=>`<option ${APP.filters.status_gizi===g?'selected':''}>${g}</option>`).join('')}</select>
+        <select onchange="updateFilter('status_pendampingan',this.value)"><option value="">Pendampingan</option>${['Belum Dikunjungi','Sudah Dikunjungi','Dalam Pendampingan','Graduated'].map(g=>`<option ${APP.filters.status_pendampingan===g?'selected':''}>${g}</option>`).join('')}</select>
+        <button class="btn btn-outline" onclick="resetFilters()">🔄</button>
+      </div>
+      <div style="margin-bottom:12px;font-size:13px">Menampilkan <b>${pageData.length}</b> dari <b>${fmtNum(total)}</b></div>
+      ${total === 0 ? '<div class="empty"><div class="ic">📋</div><div>Belum ada data kasus</div><div style="margin-top:12px;font-size:12px">Buka <b>Pengaturan</b> untuk Import CSV</div></div>' : `
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>#</th><th>Nama/NIK</th><th>Usia</th><th>Alamat</th><th>Gizi</th><th>Pendampingan</th><th>Tim</th><th>Aksi</th></tr></thead>
+          <tbody>
+            ${pageData.map((x,i) => `
+              <tr>
+                <td>${start+i+1}</td>
+                <td><div style="font-weight:600">${esc(x.nama)}</div><div style="font-size:11px;color:var(--gray-500)">${x.nik||'-'}</div></td>
+                <td>${x.usia_bulan||0} bln</td>
+                <td><div style="font-size:12px">${esc(x.desa||'-')}</div><div style="font-size:11px;color:var(--gray-500)">${esc(x.kecamatan||'-')}</div></td>
+                <td>${badgeGizi(x.status_gizi)}</td>
+                <td>${badgePend(x.status_pendampingan)}</td>
+                <td style="font-size:11.5px">${x.team_id?esc(teamLabel(x.team_id)):'-'}</td>
+                <td style="white-space:nowrap">
+                  <button class="btn btn-sm btn-outline" onclick="openDetail('${x.id}')">👁</button>
+                  <button class="btn btn-sm btn-info" onclick="openEdit('${x.id}')">✏️</button>
+                  <button class="btn btn-sm btn-danger" onclick="deleteCase('${x.id}')">🗑</button>
+                </td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+      ${totalPages > 1 ? `<div class="pagination"><div>Hal ${APP.page}/${totalPages}</div><div class="pages">
+        <button ${APP.page===1?'disabled':''} onclick="gotoPage(${APP.page-1})">‹</button>
+        ${pageRange(APP.page,totalPages).map(p => p==='...'?'<span style="padding:6px">...</span>':`<button class="${p===APP.page?'active':''}" onclick="gotoPage(${p})">${p}</button>`).join('')}
+        <button ${APP.page===totalPages?'disabled':''} onclick="gotoPage(${APP.page+1})">›</button>
+      </div></div>`:''}`}
+    </div>`;
+}
+function pageRange(cur, total){
+  const r = [];
+  if(total <= 7){ for(let i=1;i<=total;i++) r.push(i); return r; }
+  r.push(1); if(cur > 3) r.push('...');
+  for(let i=Math.max(2,cur-1); i<=Math.min(total-1,cur+1); i++) r.push(i);
+  if(cur < total-2) r.push('...'); r.push(total); return r;
+}
+
+/* ==================== KUNJUNGAN SAYA ==================== */
+function renderKunjungan(c){
+  let myCases = (APP.state.cases||[]).filter(x => x.status_pendampingan !== 'Graduated');
+  const belum = (APP.state.cases||[]).filter(x => x.status_pendampingan==='Belum Dikunjungi');
+  const proses = (APP.state.cases||[]).filter(x => ['Dalam Pendampingan','Sudah Dikunjungi'].includes(x.status_pendampingan));
+  c.innerHTML = `
+    <div class="stats-grid">
+      <div class="stat-card"><div class="icon" style="background:var(--gray-100)">📋</div><div class="label">Total</div><div class="value">${fmtNum(myCases.length)}</div></div>
+      <div class="stat-card"><div class="icon" style="background:var(--danger-light);color:var(--danger)">⏳</div><div class="label">Belum</div><div class="value">${fmtNum(belum.length)}</div></div>
+      <div class="stat-card"><div class="icon" style="background:var(--warning-light);color:var(--warning)">🔄</div><div class="label">Proses</div><div class="value">${fmtNum(proses.length)}</div></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><div><div class="card-title">🏠 Daftar Kunjungan</div></div></div>
+      ${myCases.length === 0 ? '<div class="empty"><div class="ic">🎉</div><div>Belum ada kasus</div></div>' : `
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>#</th><th>Nama</th><th>Alamat</th><th>Gizi</th><th>Aksi</th></tr></thead>
+          <tbody>
+            ${myCases.slice(0,50).map((x,i) => `
+              <tr>
+                <td>${i+1}</td>
+                <td><div style="font-weight:600">${esc(x.nama)}</div></td>
+                <td style="font-size:12px">${esc(x.alamat||'-')}<br><span style="color:var(--gray-500)">${esc(x.desa||'-')}</span></td>
+                <td>${badgeGizi(x.status_gizi)}</td>
+                <td style="white-space:nowrap">
+                  <button class="btn btn-sm btn-primary-solid" onclick="openKunjungan('${x.id}')">🏠</button>
+                  <a class="btn btn-sm btn-outline" href="https://wa.me/62${(x.hp_ortu||'').replace(/^0/,'')}" target="_blank">💬</a>
+                  <button class="btn btn-sm btn-outline" onclick="openDetail('${x.id}')">👁</button>
+                </td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>`}
+    </div>`;
+}
+
+/* ==================== TPK ==================== */
+function renderTPK(c){
+  const tpk = APP.state.tpk || [];
+  const byKec = {};
+  tpk.forEach(t => { byKec[t.kecamatan] = (byKec[t.kecamatan]||0) + 1; });
+  c.innerHTML = `
+    <div class="stats-grid">
+      <div class="stat-card"><div class="icon" style="background:var(--primary-light);color:var(--primary)">👥</div><div class="label">Total Tim</div><div class="value">${fmtNum(tpk.length)}</div></div>
+      <div class="stat-card"><div class="icon" style="background:var(--info-light);color:var(--info)">🧑‍⚕️</div><div class="label">Total Personel</div><div class="value">${fmtNum(tpk.length * 3)}</div></div>
+      <div class="stat-card"><div class="icon" style="background:var(--warning-light);color:var(--warning)">🗺️</div><div class="label">Kecamatan</div><div class="value">${Object.keys(byKec).length}</div></div>
+      <div class="stat-card"><div class="icon" style="background:var(--success-light);color:var(--success)">🏘️</div><div class="label">Desa</div><div class="value">${new Set(tpk.map(t=>t.desa)).size}</div></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><div><div class="card-title">👥 Daftar Tim TPK</div></div></div>
+      ${tpk.length === 0 ? '<div class="empty"><div class="ic">👥</div><div>Belum ada data TPK</div><div style="font-size:12px;margin-top:8px">Buka <b>Pengaturan → Import TPK</b></div></div>' : `
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px">
+        ${tpk.slice(0,60).map(t => `
+          <div class="team-card">
+            <div class="team-header">
+              <div class="team-title">Tim ${t.tim} · ${esc(t.desa)}</div>
+              <span class="badge badge-info">${esc(t.kecamatan)}</span>
+            </div>
+            <div class="member bidan"><div class="ic">🩺</div><div><div style="font-weight:600">${esc(t.bidan?.nama||'-')}</div><div style="font-size:10.5px;color:var(--gray-500)">Bidan</div></div></div>
+            <div class="member pkk"><div class="ic">👩</div><div><div style="font-weight:600">${esc(t.pkk?.nama||'-')}</div><div style="font-size:10.5px;color:var(--gray-500)">Kader PKK</div></div></div>
+            <div class="member kb"><div class="ic">👨‍👩‍👧</div><div><div style="font-weight:600">${esc(t.kb?.nama||'-')}</div><div style="font-size:10.5px;color:var(--gray-500)">Kader KB</div></div></div>
+          </div>`).join('')}
+      </div>
+      ${tpk.length > 60 ? `<div style="text-align:center;padding:12px;color:var(--gray-500);font-size:12px">60 dari ${tpk.length} tim</div>`:''}`}
+    </div>`;
+}
+
+/* ==================== PROGRESS TIM ==================== */
+function renderProgress(c){
+  const stat = {};
+  (APP.state.tpk||[]).forEach(t => { stat[t.teamId] = {t, total:0, belum:0, proses:0, grad:0}; });
+  (APP.state.cases||[]).forEach(x => {
+    if(x.team_id && stat[x.team_id]){
+      stat[x.team_id].total++;
+      if(x.status_pendampingan==='Belum Dikunjungi') stat[x.team_id].belum++;
+      else if(x.status_pendampingan==='Graduated') stat[x.team_id].grad++;
+      else stat[x.team_id].proses++;
+    }
+  });
+  const list = Object.values(stat).sort((a,b) => b.total - a.total);
+  c.innerHTML = `
+    <div class="card">
+      <div class="card-header"><div><div class="card-title">📊 Kinerja Tim TPK</div></div></div>
+      ${list.length === 0 ? '<div class="empty"><div class="ic">👥</div><div>Belum ada data</div></div>' : `
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>#</th><th>Tim</th><th>Desa</th><th>Kec.</th><th>Total</th><th>Progress</th><th>Belum</th><th>Grad</th></tr></thead>
+          <tbody>
+            ${list.map((s,i) => {
+              const selesai = s.proses + s.grad;
+              const pct = s.total ? Math.round(selesai/s.total*100) : 0;
+              return `<tr>
+                <td>${i+1}</td>
+                <td><b>Tim ${s.t.tim}</b></td>
+                <td>${esc(s.t.desa)}</td>
+                <td style="font-size:12px">${esc(s.t.kecamatan)}</td>
+                <td>${s.total}</td>
+                <td style="min-width:150px">
+                  <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px"><span>${pct}%</span><span>${selesai}/${s.total}</span></div>
+                  <div class="pbar"><div class="pbar-fill" style="width:${pct}%"></div></div>
+                </td>
+                <td>${s.belum}</td>
+                <td><span class="badge badge-success">${s.grad}</span></td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>`}
+    </div>`;
+}
+
+/* ==================== PENGATURAN ==================== */
+function renderPengaturan(c){
+  const cases = (APP.state.cases||[]).length;
+  const tpk = (APP.state.tpk||[]).length;
+  c.innerHTML = `
+    <div class="card">
+      <div class="card-header"><div><div class="card-title">📊 Status Data</div></div></div>
+      <div class="stats-grid">
+        <div class="stat-card"><div class="label">Kasus BNBA</div><div class="value">${fmtNum(cases)}</div></div>
+        <div class="stat-card"><div class="label">Tim TPK</div><div class="value">${fmtNum(tpk)}</div></div>
+      </div>
+    </div>
+    
+    <div class="card">
+      <div class="card-header"><div><div class="card-title">📥 Import Data TPK (Excel)</div><div class="card-sub">Upload file Excel dari SK Bupati</div></div></div>
+      <div class="form-group">
+        <label>Pilih file Excel (.xlsx)</label>
+        <input type="file" id="excelTPK" accept=".xlsx,.xls">
+      </div>
+      <button class="btn btn-primary-solid" onclick="importTPKExcel()">📥 Import TPK dari Excel</button>
+      <div style="margin-top:12px;font-size:12px;color:var(--gray-500);line-height:1.6">
+        <b>Cara pakai:</b>
+        <ol style="padding-left:20px;margin-top:4px">
+          <li>Pilih file Excel <b>"Lampiran Nama-nama TPK"</b></li>
+          <li>Klik tombol Import</li>
+          <li>Tunggu sampai selesai — data TPK otomatis tersimpan</li>
+        </ol>
+      </div>
+    </div>
+    
+    <div class="card">
+      <div class="card-header"><div><div class="card-title">📥 Import Kasus BNBA (CSV)</div></div></div>
+      <div class="form-group">
+        <label>Pilih file CSV BNBA</label>
+        <input type="file" id="csvBNBA" accept=".csv,.txt">
+      </div>
+      <button class="btn btn-primary-solid" onclick="importBNBA()">📥 Import BNBA dari CSV</button>
+      <div style="margin-top:12px;font-size:12px;color:var(--gray-500);line-height:1.6">
+        <b>Format CSV (baris pertama header):</b>
+        <pre style="background:var(--gray-900);color:#a7f3d0;padding:10px;border-radius:8px;font-size:10.5px;overflow-x:auto;margin-top:6px">nik,no_kk,nama,jk,tgl_lahir,usia_bulan,nama_ibu,nama_ayah,alamat,desa,kecamatan,posyandu,hp_ortu,bb,tb,status_gizi</pre>
+      </div>
+    </div>
+    
+    <div class="card">
+      <div class="card-header"><div><div class="card-title">💾 Backup & Reset</div></div></div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn btn-info" onclick="exportJSON()">📥 Ekspor Backup JSON</button>
+        <button class="btn btn-outline" onclick="exportCSV()">📤 Ekspor Kasus ke CSV</button>
+        <button class="btn btn-warning" onclick="confirmReset()">🗑 Reset Semua Kasus</button>
+      </div>
+      <div style="margin-top:12px;font-size:12px;color:var(--gray-500)">
+        ⚠️ <b>Reset</b> akan mengosongkan semua kasus BNBA (TPK tetap aman). Cocok kalau masih ada data dummy.
+      </div>
+    </div>
+  `;
+}
+
+/* ==================== DETAIL ==================== */
+function openDetail(id){
+  const x = (APP.state.cases||[]).find(c => c.id === id);
+  if(!x) return;
+  APP.currentDetail = x;
+  const team = x.team_id ? findTeam(x.team_id) : null;
+  document.getElementById('detailBody').innerHTML = `
+    <div style="background:var(--primary-light);padding:16px;border-radius:12px;margin-bottom:20px">
+      <div style="font-size:11px;color:var(--primary-dark);font-weight:600">DATA BALITA</div>
+      <div style="font-size:18px;font-weight:700;margin-top:4px">${esc(x.nama)}</div>
+      <div style="font-size:12px;color:var(--gray-700);margin-top:2px">NIK: ${x.nik||'-'}</div>
+      <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">${badgeGizi(x.status_gizi)} ${badgePend(x.status_pendampingan)}</div>
+    </div>
+    ${team ? `<div style="background:var(--gray-50);padding:12px;border-radius:10px;margin-bottom:16px">
+      <div style="font-size:11px;color:var(--gray-500);font-weight:700">TIM PENDAMPING</div>
+      <div style="font-weight:700;margin-top:4px">Tim ${team.tim} · ${esc(team.desa)}</div>
+    </div>`:''}
+    <div class="info-grid">
+      <div class="info-row"><span class="lbl">JK</span><span class="val">${x.jk==='L'?'Laki-laki':'Perempuan'}</span></div>
+      <div class="info-row"><span class="lbl">Usia</span><span class="val">${x.usia_bulan||0} bulan</span></div>
+      <div class="info-row"><span class="lbl">Nama Ibu</span><span class="val">${esc(x.nama_ibu||'-')}</span></div>
+      <div class="info-row"><span class="lbl">Nama Ayah</span><span class="val">${esc(x.nama_ayah||'-')}</span></div>
+      <div class="info-row"><span class="lbl">Alamat</span><span class="val">${esc(x.alamat||'-')}</span></div>
+      <div class="info-row"><span class="lbl">Desa</span><span class="val">${esc(x.desa||'-')}</span></div>
+      <div class="info-row"><span class="lbl">Kecamatan</span><span class="val">${esc(x.kecamatan||'-')}</span></div>
+      <div class="info-row"><span class="lbl">HP Ortu</span><span class="val">${x.hp_ortu||'-'}</span></div>
+    </div>
+    <div style="margin-top:22px">
+      <div style="font-weight:700;font-size:14px;margin-bottom:10px">📏 Hasil Ukur</div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
+        <div style="background:var(--gray-50);padding:12px;border-radius:10px;text-align:center"><div style="font-size:11px;color:var(--gray-500)">BB</div><div style="font-size:18px;font-weight:700">${x.bb||'-'}</div></div>
+        <div style="background:var(--gray-50);padding:12px;border-radius:10px;text-align:center"><div style="font-size:11px;color:var(--gray-500)">TB</div><div style="font-size:18px;font-weight:700">${x.tb||'-'}</div></div>
+        <div style="background:var(--gray-50);padding:12px;border-radius:10px;text-align:center"><div style="font-size:11px;color:var(--gray-500)">LK</div><div style="font-size:18px;font-weight:700">${x.lk||'-'}</div></div>
+        <div style="background:var(--gray-50);padding:12px;border-radius:10px;text-align:center"><div style="font-size:11px;color:var(--gray-500)">LILA</div><div style="font-size:18px;font-weight:700">${x.lila||'-'}</div></div>
+      </div>
+    </div>`;
+  document.getElementById('detailFooter').innerHTML = `
+    <button class="btn btn-outline" onclick="closeModal('modalDetail')">Tutup</button>
+    <button class="btn btn-primary-solid" onclick="openKunjungan('${x.id}')">🏠 Kunjungan</button>
+    <button class="btn btn-info" onclick="openAssign('${x.id}')">👥 Tugaskan Tim</button>
+    <button class="btn btn-warning" onclick="openEdit('${x.id}')">✏️ Edit</button>`;
+  document.getElementById('modalDetail').classList.add('show');
+}
+
+/* ==================== KUNJUNGAN ==================== */
+function openKunjungan(id){
+  const x = (APP.state.cases||[]).find(c => c.id === id);
+  if(!x) return;
+  APP.currentKunjungan = x;
+  closeModal('modalDetail');
+  document.getElementById('kunjunganBody').innerHTML = `
+    <div style="background:var(--primary-light);padding:14px;border-radius:10px;margin-bottom:18px">
+      <div style="font-weight:700">${esc(x.nama)} (${x.usia_bulan||0} bulan)</div>
+    </div>
+    <div class="form-grid">
+      <div class="form-group"><label>Tanggal</label><input type="date" id="k_tgl" value="${new Date().toISOString().slice(0,10)}"></div>
+      <div class="form-group"><label>Petugas</label><input type="text" value="${esc(APP.user.nama)}" readonly></div>
+      <div class="form-group"><label>BB (kg)</label><input type="number" step="0.1" id="k_bb" value="${x.bb||''}" oninput="hitungZ()"></div>
+      <div class="form-group"><label>TB (cm)</label><input type="number" step="0.1" id="k_tb" value="${x.tb||''}" oninput="hitungZ()"></div>
+      <div class="form-group full" id="zDisplay"></div>
+      <div class="form-group full"><label>Status Gizi</label>
+        <select id="k_gizi">${['Stunting','Gizi Kurang','Gizi Buruk','Ideal'].map(g=>`<option ${x.status_gizi===g?'selected':''}>${g}</option>`).join('')}</select>
+      </div>
+      <div class="form-group full"><label>Status Pendampingan</label>
+        <select id="k_pend">${['Sudah Dikunjungi','Dalam Pendampingan','Graduated'].map(g=>`<option ${x.status_pendampingan===g?'selected':''}>${g}</option>`).join('')}</select>
+      </div>
+      <div class="form-group full"><label>Catatan</label><textarea id="k_cat" rows="3"></textarea></div>
+    </div>`;
+  document.getElementById('modalKunjungan').classList.add('show');
+  hitungZ();
+}
+function hitungZ(){
+  const x = APP.currentKunjungan;
+  if(!x) return;
+  const bb = parseFloat(document.getElementById('k_bb').value);
+  const tb = parseFloat(document.getElementById('k_tb').value);
+  const d = document.getElementById('zDisplay');
+  if(isNaN(bb)||isNaN(tb)||bb<=0||tb<=0){ d.innerHTML = ''; return; }
+  const zB = WHO.zBBU(bb, x.usia_bulan||0, x.jk);
+  const zT = WHO.zTBU(tb, x.usia_bulan||0, x.jk);
+  const st = WHO.klasifikasi(zB, zT);
+  document.getElementById('k_gizi').value = st;
+  const cls = st === 'Ideal' ? '' : (zT<-3||zB<-3 ? 'bad' : 'warn');
+  d.innerHTML = `<div class="zscore-card ${cls}">
+    <div style="font-weight:700;font-size:12.5px;margin-bottom:6px">🎯 Skor Z</div>
+    <div class="zscore-row"><span>BB/U</span><b>${zB.toFixed(2)}</b></div>
+    <div class="zscore-row"><span>TB/U</span><b>${zT.toFixed(2)}</b></div>
+    <div class="zscore-row" style="border-top:1px dashed var(--gray-300);padding-top:6px;margin-top:6px"><span><b>Hasil</b></span><b>${st}</b></div>
+  </div>`;
+}
+function saveKunjungan(){
+  const x = APP.currentKunjungan;
+  if(!x) return;
+  const bb = parseFloat(document.getElementById('k_bb').value);
+  const tb = parseFloat(document.getElementById('k_tb').value);
+  if(isNaN(bb)||isNaN(tb)){ toast('⚠️ Isi BB & TB','error'); return; }
+  x.bb = bb; x.tb = tb;
+  x.status_gizi = document.getElementById('k_gizi').value;
+  x.status_pendampingan = document.getElementById('k_pend').value;
+  x.catatan = document.getElementById('k_cat').value;
+  x.tgl_ukur_terakhir = document.getElementById('k_tgl').value;
+  if(!x.riwayat) x.riwayat = [];
+  x.riwayat.push({ id:'RW'+Date.now(), tanggal:x.tgl_ukur_terakhir, jenis:'Kunjungan', catatan:x.catatan || `Status: ${x.status_gizi}` });
+  saveState();
+  closeModal('modalKunjungan');
+  toast(`✅ Tersimpan! Status: ${x.status_gizi}`,'success');
+  updateBadge();
+  const active = document.querySelector('.nav-item.active').dataset.view;
+  showView(active, document.querySelector('.nav-item.active'));
+}
+
+/* ==================== EDIT ==================== */
+function openAddNew(){
+  APP.currentEdit = null;
+  document.getElementById('editTitle').textContent = '➕ Tambah Balita';
+  document.getElementById('editBody').innerHTML = buildEditForm({nama:'',jk:'L',tgl_lahir:'',usia_bulan:0,alamat:'',desa:'',kecamatan:'',posyandu:'',hp_ortu:'',bb:'',tb:'',status_gizi:'Ideal',status_pendampingan:'Belum Dikunjungi'});
+  document.getElementById('modalEdit').classList.add('show');
+}
+function openEdit(id){
+  const x = (APP.state.cases||[]).find(c => c.id === id);
+  if(!x) return;
+  APP.currentEdit = x;
+  closeModal('modalDetail');
+  document.getElementById('editTitle').textContent = '✏️ Edit — ' + x.nama;
+  document.getElementById('editBody').innerHTML = buildEditForm(x);
+  document.getElementById('modalEdit').classList.add('show');
+}
+function buildEditForm(x){
+  return `
+    <div class="form-grid">
+      <div class="form-group"><label>Nama *</label><input type="text" id="e_nama" value="${esc(x.nama||'')}"></div>
+      <div class="form-group"><label>JK *</label><select id="e_jk"><option value="L" ${x.jk==='L'?'selected':''}>L</option><option value="P" ${x.jk==='P'?'selected':''}>P</option></select></div>
+      <div class="form-group"><label>Tgl Lahir *</label><input type="date" id="e_lahir" value="${x.tgl_lahir||''}" onchange="calcU()"></div>
+      <div class="form-group"><label>Usia (bulan)</label><input type="number" id="e_usia" value="${x.usia_bulan||0}" readonly></div>
+      <div class="form-group full"><label>Alamat *</label><input type="text" id="e_alamat" value="${esc(x.alamat||'')}"></div>
+      <div class="form-group"><label>Desa *</label><input type="text" id="e_desa" value="${esc(x.desa||'')}"></div>
+      <div class="form-group"><label>Kecamatan *</label>
+        <select id="e_kec"><option value="">- Pilih -</option>${KECAMATAN.map(k=>`<option ${x.kecamatan===k?'selected':''}>${k}</option>`).join('')}</select>
+      </div>
+      <div class="form-group"><label>HP Ortu</label><input type="text" id="e_hp" value="${esc(x.hp_ortu||'')}" placeholder="08xxx"></div>
+      <div class="form-group"><label>BB (kg)</label><input type="number" step="0.1" id="e_bb" value="${x.bb||''}"></div>
+      <div class="form-group"><label>TB (cm)</label><input type="number" step="0.1" id="e_tb" value="${x.tb||''}"></div>
+      <div class="form-group"><label>Status Gizi</label>
+        <select id="e_gizi">${['Stunting','Gizi Kurang','Gizi Buruk','Ideal'].map(g=>`<option ${x.status_gizi===g?'selected':''}>${g}</option>`).join('')}</select>
+      </div>
+      <div class="form-group"><label>Pendampingan</label>
+        <select id="e_pend">${['Belum Dikunjungi','Sudah Dikunjungi','Dalam Pendampingan','Graduated'].map(g=>`<option ${x.status_pendampingan===g?'selected':''}>${g}</option>`).join('')}</select>
+      </div>
+    </div>`;
+}
+function calcU(){
+  const l = document.getElementById('e_lahir').value;
+  if(!l) return;
+  const d = new Date(l), n = new Date();
+  document.getElementById('e_usia').value = Math.max(0, (n.getFullYear()-d.getFullYear())*12 + (n.getMonth()-d.getMonth()));
+}
+function saveEdit(){
+  const isNew = !APP.currentEdit;
+  const nama = document.getElementById('e_nama').value.trim();
+  const alamat = document.getElementById('e_alamat').value.trim();
+  const desa = document.getElementById('e_desa').value.trim();
+  const kec = document.getElementById('e_kec').value;
+  if(!nama || !alamat || !desa || !kec){ toast('⚠️ Lengkapi field bertanda *','error'); return; }
+  const usia = parseInt(document.getElementById('e_usia').value) || 0;
+  const data = {
+    nama, jk:document.getElementById('e_jk').value,
+    tgl_lahir: document.getElementById('e_lahir').value, usia_bulan: usia,
+    alamat, desa, kecamatan: kec,
+    hp_ortu: document.getElementById('e_hp').value.trim(),
+    bb: parseFloat(document.getElementById('e_bb').value) || 0,
+    tb: parseFloat(document.getElementById('e_tb').value) || 0,
+    status_gizi: document.getElementById('e_gizi').value,
+    status_pendampingan: document.getElementById('e_pend').value
+  };
+  if(isNew){
+    data.id = 'CS' + Date.now().toString(36).toUpperCase();
+    data.nik = '730000' + Date.now().toString().slice(-10);
+    data.no_kk = data.nik;
+    data.riwayat = []; data.tgl_ukur_terakhir = new Date().toISOString().slice(0,10);
+    if(!APP.state.cases) APP.state.cases = [];
+    APP.state.cases.push(data);
+    toast('✅ Ditambahkan','success');
+  } else {
+    Object.assign(APP.currentEdit, data);
+    toast('✅ Diperbarui','success');
+  }
+  saveState();
+  closeModal('modalEdit');
+  updateBadge();
+  const active = document.querySelector('.nav-item.active').dataset.view;
+  showView(active, document.querySelector('.nav-item.active'));
+}
+function deleteCase(id){
+  const x = (APP.state.cases||[]).find(c => c.id === id);
+  if(!x) return;
+  if(!confirm(`Hapus "${x.nama}"?`)) return;
+  APP.state.cases = APP.state.cases.filter(c => c.id !== id);
+  saveState();
+  toast('🗑 Dihapus','success');
+  updateBadge();
+  const active = document.querySelector('.nav-item.active').dataset.view;
+  showView(active, document.querySelector('.nav-item.active'));
+}
+
+/* ==================== ASSIGN ==================== */
+function openAssign(id){
+  const x = (APP.state.cases||[]).find(c => c.id === id);
+  if(!x) return;
+  APP.currentAssign = x;
+  const teams = (APP.state.tpk||[]).filter(t => t.kecamatan === x.kecamatan);
+  document.getElementById('assignBody').innerHTML = `
+    <div class="form-group"><label>Pilih Tim TPK</label>
+      <select id="a_team"><option value="">- Belum ditugaskan -</option>${teams.map(t=>`<option value="${t.teamId}" ${x.team_id===t.teamId?'selected':''}>Tim ${t.tim} · ${esc(t.desa)}</option>`).join('')}</select>
+    </div>`;
+  document.getElementById('modalAssign').classList.add('show');
+}
+function saveAssign(){
+  const x = APP.currentAssign;
+  if(!x) return;
+  x.team_id = document.getElementById('a_team').value || null;
+  saveState();
+  closeModal('modalAssign'); closeModal('modalDetail');
+  toast('✅ Tim ditugaskan','success');
+  const active = document.querySelector('.nav-item.active').dataset.view;
+  showView(active, document.querySelector('.nav-item.active'));
+}
+
+/* ==================== IMPORT TPK EXCEL ==================== */
+async function importTPKExcel(){
+  const f = document.getElementById('excelTPK').files[0];
+  if(!f){ toast('Pilih file Excel dulu','warning'); return; }
+  showLoading('Parsing Excel...');
+  try {
+    const buf = await f.arrayBuffer();
+    const wb = XLSX.read(buf, {type:'array'});
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+    let cKec = '', cDesa = '', cTim = 0;
+    const teams = {};
+    for(let i=0; i<rows.length; i++){
+      const r = rows[i];
+      if(!r || !r[4]) continue;
+      const nama = String(r[4]).trim();
+      if(!nama || nama.toLowerCase().includes('nama tpk')) continue;
+      if(nama.toLowerCase().includes('jumlah peserta')) continue;
+      if(/^\d+\s*orang$/i.test(nama)) continue;
+      if(r[1] && String(r[1]).trim()) cKec = String(r[1]).trim().toUpperCase();
+      if(r[2] && String(r[2]).trim()) cDesa = String(r[2]).trim();
+      if(r[3] && String(r[3]).trim()){
+        const m = String(r[3]).match(/(\d+)/);
+        if(m) cTim = parseInt(m[1]);
+      }
+      if(!cKec || !cDesa || !cTim) continue;
+      const unsur = String(r[5]||'').trim().toLowerCase();
+      const hp = String(r[6]||'').trim().replace(/['\s\.]/g,'');
+      const key = cKec + '#' + cDesa + '#' + cTim;
+      if(!teams[key]) teams[key] = {kecamatan:cKec, desa:cDesa, tim:cTim, bidan:null, pkk:null, kb:null};
+      const t = teams[key];
+      if(unsur.includes('bidan')) t.bidan = {nama, hp};
+      else if(unsur.includes('pkk')) t.pkk = {nama, hp};
+      else if(unsur.includes('kb')) t.kb = {nama, hp};
+    }
+    const tpkList = Object.values(teams).filter(t => t.bidan || t.pkk || t.kb).map((t,i) => ({
+      id: 'TPK'+String(i+1).padStart(4,'0'),
+      teamId: 'TIM-'+t.kecamatan.replace(/\s/g,'')+'-'+t.desa.replace(/\s/g,'')+'-'+t.tim,
+      kecamatan: t.kecamatan, desa: t.desa, tim: t.tim,
+      bidan: t.bidan || {nama:'-',hp:'-'},
+      pkk: t.pkk || {nama:'-',hp:'-'},
+      kb: t.kb || {nama:'-',hp:'-'},
+      jumlah_kasus: 0, selesai: 0
+    }));
+    if(tpkList.length === 0){ hideLoading(); toast('❌ Tidak ada data TPK di file','error'); return; }
+    if(!confirm(`Import ${tpkList.length} tim TPK?\nData TPK lama (${(APP.state.tpk||[]).length}) akan diganti.`)){ hideLoading(); return; }
+    APP.state.tpk = tpkList;
+    // Re-assign kasus ke tim baru
+    autoAssign();
+    saveState();
+    hideLoading();
+    toast(`✅ ${tpkList.length} Tim TPK diimport + kasus di-assign ulang`,'success');
+    updateBadge();
+    showView('tpk', document.querySelector('.nav-item[data-view="tpk"]'));
+  } catch(e){
+    hideLoading();
+    console.error(e);
+    toast('❌ Gagal parse: ' + e.message,'error');
+  }
+}
+
+function autoAssign(){
+  const groups = {};
+  (APP.state.tpk||[]).forEach(t => {
+    const key = t.kecamatan + '||' + (t.desa||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+    if(!groups[key]) groups[key] = [];
+    groups[key].push(t);
+  });
+  const kecOnly = {};
+  (APP.state.tpk||[]).forEach(t => {
+    if(!kecOnly[t.kecamatan]) kecOnly[t.kecamatan] = [];
+    kecOnly[t.kecamatan].push(t);
+  });
+  const counters = {};
+  (APP.state.tpk||[]).forEach(t => counters[t.teamId] = 0);
+  (APP.state.cases||[]).forEach(c => {
+    const kk = (c.kecamatan||'').toUpperCase();
+    const kd = (c.desa||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+    let pool = groups[kk+'||'+kd];
+    if(!pool || !pool.length) pool = kecOnly[kk];
+    if(!pool || !pool.length){ c.team_id = null; return; }
+    pool.sort((a,b) => counters[a.teamId] - counters[b.teamId]);
+    c.team_id = pool[0].teamId;
+    counters[pool[0].teamId]++;
+  });
+}
+
+/* ==================== IMPORT BNBA CSV ==================== */
+function importBNBA(){
+  const f = document.getElementById('csvBNBA').files[0];
+  if(!f){ toast('Pilih file CSV dulu','warning'); return; }
+  const reader = new FileReader();
+  reader.onload = e => {
+    const lines = e.target.result.split(/\r?\n/).filter(l => l.trim());
+    if(lines.length < 2){ toast('File kosong','error'); return; }
+    const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/"/g,''));
+    const rows = lines.slice(1).map(line => {
+      const vals = []; let cur = ''; let inQ = false;
+      for(let i=0; i<line.length; i++){
+        const ch = line[i];
+        if(ch === '"'){ if(inQ && line[i+1]==='"'){ cur+='"'; i++; } else inQ = !inQ; }
+        else if(ch === ',' && !inQ){ vals.push(cur); cur = ''; }
+        else cur += ch;
+      }
+      vals.push(cur);
+      const o = {};
+      headers.forEach((h,i) => o[h] = (vals[i]||'').trim());
+      return o;
+    });
+    const cases = rows.map((r,i) => ({
+      id: 'CS' + Date.now() + '_' + i,
+      nik: r.nik||'', no_kk: r.no_kk||'',
+      nama: r.nama||'', jk: r.jk||'L',
+      tgl_lahir: r.tgl_lahir||'',
+      usia_bulan: parseInt(r.usia_bulan)||0,
+      nama_ibu: r.nama_ibu||'', nama_ayah: r.nama_ayah||'',
+      alamat: r.alamat||'', desa: r.desa||'',
+      kecamatan: (r.kecamatan||'').toUpperCase(),
+      posyandu: r.posyandu||'', hp_ortu: r.hp_ortu||'',
+      bb: parseFloat(r.bb)||0, tb: parseFloat(r.tb)||0,
+      status_gizi: r.status_gizi||'Ideal',
+      status_pendampingan: 'Belum Dikunjungi',
+      team_id: null, riwayat: [],
+      tgl_ukur_terakhir: new Date().toISOString().slice(0,10)
+    })).filter(c => c.nama);
+    if(cases.length === 0){ toast('Tidak ada data valid','error'); return; }
+    if(!confirm(`Import ${cases.length} kasus?\nData lama (${(APP.state.cases||[]).length}) akan diganti.`)) return;
+    APP.state.cases = cases;
+    autoAssign();
+    saveState();
+    toast(`✅ ${cases.length} kasus diimport`,'success');
+    updateBadge();
+    showView('kasus', document.querySelector('.nav-item[data-view="kasus"]'));
+  };
+  reader.readAsText(f);
+}
+
+/* ==================== BACKUP & RESET ==================== */
+function exportJSON(){
+  const blob = new Blob([JSON.stringify(APP.state)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `SISTUNTING_backup_${new Date().toISOString().slice(0,10)}.json`;
+  a.click(); URL.revokeObjectURL(url);
+  toast('✅ Backup diunduh','success');
+}
+function exportCSV(){
+  const arr = APP.state.cases || [];
+  const headers = ['nik','no_kk','nama','jk','tgl_lahir','usia_bulan','nama_ibu','nama_ayah','alamat','desa','kecamatan','posyandu','hp_ortu','bb','tb','status_gizi','status_pendampingan','tim'];
+  const rows = arr.map(x => [x.nik,x.no_kk,x.nama,x.jk,x.tgl_lahir,x.usia_bulan,x.nama_ibu,x.nama_ayah,x.alamat,x.desa,x.kecamatan,x.posyandu,x.hp_ortu,x.bb,x.tb,x.status_gizi,x.status_pendampingan,x.team_id?teamLabel(x.team_id):'']);
+  const csv = [headers, ...rows].map(r => r.map(v => `"${String(v||'').replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob(['\ufeff' + csv], {type:'text/csv;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `BNBA_Jeneponto_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click(); URL.revokeObjectURL(url);
+  toast('✅ CSV diunduh','success');
+}
+function confirmReset(){
+  document.getElementById('confirmTitle').textContent = '🗑 Reset Semua Kasus';
+  document.getElementById('confirmBody').innerHTML = `
+    <p>Anda akan <b>menghapus SEMUA kasus BNBA</b> dari website + Cloud.</p>
+    <p style="margin-top:8px;color:var(--success)">✅ Data TPK tetap aman (${(APP.state.tpk||[]).length} tim)</p>
+    <p style="margin-top:8px;color:var(--danger);font-weight:600">⚠️ Tindakan ini tidak bisa dibatalkan!</p>
+    <p style="margin-top:12px;font-size:12px;color:var(--gray-500)">Saran: klik "Ekspor Backup JSON" dulu sebelum reset.</p>`;
+  document.getElementById('confirmBtn').onclick = async () => {
+    closeModal('modalConfirm');
+    showLoading('Menghapus data...');
+    const ok = await Cloud.reset();
+    hideLoading();
+    if(ok){
+      toast('🗑 Semua kasus dihapus','success');
+      updateBadge();
+      showView('dashboard', document.querySelector('.nav-item[data-view="dashboard"]'));
+    }
+  };
+  document.getElementById('modalConfirm').classList.add('show');
+}
+
+/* ==================== EVENT ==================== */
+document.querySelectorAll('.modal-bg').forEach(m => {
+  m.addEventListener('click', e => { if(e.target === m) m.classList.remove('show'); });
+});
+document.addEventListener('click', e => {
+  const sb = document.getElementById('sidebar');
+  if(window.innerWidth <= 900 && sb.classList.contains('open')){
+    if(!sb.contains(e.target) && !e.target.classList.contains('menu-toggle')) sb.classList.remove('open');
+  }
+});
+</script>
+</body>
+</html>
