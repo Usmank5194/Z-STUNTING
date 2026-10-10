@@ -1200,5 +1200,58 @@ document.addEventListener('click', e => {
   }
 });
 </script>
+  [KODE SEBELUMNYA...]
+
+<script>
+/* ========== AUTO-LOGIN PATCH ========== */
+(function(){
+  const SK = 'zstunting_session';
+  function saveSess(){
+    try { if(APP && APP.user) localStorage.setItem(SK, JSON.stringify({username:APP.user.username, at:new Date().toISOString()})); } catch(e){}
+  }
+  function patch(){
+    if(typeof doLogin !== 'function' || typeof APP === 'undefined'){ setTimeout(patch, 200); return; }
+    const origLogin = window.doLogin;
+    window.doLogin = async function(e){ await origLogin(e); saveSess(); };
+    const origLogout = window.logout;
+    window.logout = function(){ localStorage.removeItem(SK); if(origLogout) origLogout.call(this); };
+    autoLogin();
+  }
+  async function autoLogin(){
+    const s = localStorage.getItem(SK);
+    if(!s) return;
+    try {
+      const { username } = JSON.parse(s);
+      if(!username) return;
+      if(!window._sbClient) window._sbClient = supabase.createClient(CLOUD_URL, CLOUD_KEY);
+      const {data} = await window._sbClient.from('sistunting_state').select('*').eq('id','main').maybeSingle();
+      let state = (data && data.data) || {cases:[],tpk:[],accounts:[],auditLog:[]};
+      if(!state.accounts) state.accounts = [];
+      if(!state.tpk) state.tpk = [];
+      if(!state.cases) state.cases = [];
+      if(!state.auditLog) state.auditLog = [];
+      if(username === 'penyuluh'){
+        APP.user = { username, nama:'Penyuluh KB Jeneponto', role:'admin', avatar:'PK' };
+      } else {
+        const acc = state.accounts.find(a => a.username === username);
+        if(!acc){ localStorage.removeItem(SK); return; }
+        const team = state.tpk.find(t => t.teamId === acc.teamId);
+        if(!team){ localStorage.removeItem(SK); return; }
+        APP.user = { username, nama:'Tim '+team.tim+' · '+team.desa, role:'kader', avatar:'TPK', teamId:acc.teamId, teamInfo:team };
+      }
+      APP.state = state;
+      localStorage.setItem('zstunting_state', JSON.stringify(state));
+      document.getElementById('loginView').style.display = 'none';
+      document.getElementById('appView').style.display = 'block';
+      if(typeof Cloud !== 'undefined') Cloud.init();
+      if(typeof initApp === 'function') initApp();
+    } catch(e){ console.warn('Auto-login gagal:', e); }
+  }
+  if(document.readyState === 'loading'){ document.addEventListener('DOMContentLoaded', patch); } else { patch(); }
+})();
+</script>
+
+</body>
+</html>
 </body>
 </html>
