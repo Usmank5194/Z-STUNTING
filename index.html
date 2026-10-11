@@ -1250,7 +1250,146 @@ document.addEventListener('click', e => {
   if(document.readyState === 'loading'){ document.addEventListener('DOMContentLoaded', patch); } else { patch(); }
 })();
 </script>
-
+<script>
+/* ========== PATCH: KADER BISA TAMBAH SASARAN BARU ========== */
+(function(){
+  function waitInit(cb){
+    if(typeof APP !== 'undefined' && typeof openAddNew === 'function'){ cb(); }
+    else { setTimeout(() => waitInit(cb), 300); }
+  }
+  
+  waitInit(() => {
+    // Override openAddNew — auto-isi wilayah kader
+    window.openAddNew = function(){
+      if(!APP.user){ toast('Silakan login dulu','error'); return; }
+      APP.currentEdit = null;
+      document.getElementById('editTitle').textContent = '➕ Tambah Sasaran Baru';
+      
+      const isKader = APP.user.role === 'kader' && APP.user.teamInfo;
+      const defaultData = {
+        nama:'', jk:'L', tgl_lahir:'', usia_bulan:0,
+        nama_ibu:'', nama_ayah:'',
+        alamat:'', 
+        desa: isKader ? APP.user.teamInfo.desa : '',
+        kecamatan: isKader ? APP.user.teamInfo.kecamatan : '',
+        hp_ortu:'', bb:'', tb:'', status_gizi:'Ideal',
+        status_pendampingan:'Belum Dikunjungi'
+      };
+      
+      document.getElementById('editBody').innerHTML = buildFormPatched(defaultData);
+      document.getElementById('modalEdit').classList.add('show');
+    };
+    
+    // Form builder baru — dengan info banner + kunci wilayah untuk kader
+    function buildFormPatched(x){
+      const isKader = APP.user.role === 'kader';
+      const timInfo = APP.user.teamInfo;
+      const banner = isKader 
+        ? `<div style="background:#e0f2fe;padding:12px;border-radius:10px;margin-bottom:16px;font-size:12.5px;color:#0369a1;line-height:1.6">
+            💡 <b>Input Sasaran Baru</b><br>
+            Data akan masuk ke wilayah tim Anda:<br>
+            📍 <b>${esc(timInfo?.desa||'')}, ${esc(timInfo?.kecamatan||'')}</b> · Tim ${timInfo?.tim||''}
+          </div>`
+        : `<div style="background:#dcfce7;padding:12px;border-radius:10px;margin-bottom:16px;font-size:12.5px;color:#166534">
+            💡 <b>Mode Admin</b> — Anda bisa input di semua wilayah
+          </div>`;
+      
+      return `
+        ${banner}
+        <div class="form-grid">
+          <div class="form-group"><label>Nama Balita *</label><input type="text" id="e_nama" value="${esc(x.nama||'')}" placeholder="Nama lengkap"></div>
+          <div class="form-group"><label>Jenis Kelamin *</label><select id="e_jk"><option value="L" ${x.jk==='L'?'selected':''}>Laki-laki</option><option value="P" ${x.jk==='P'?'selected':''}>Perempuan</option></select></div>
+          <div class="form-group"><label>Tgl Lahir *</label><input type="date" id="e_lahir" value="${x.tgl_lahir||''}" onchange="calcU()"></div>
+          <div class="form-group"><label>Usia (bulan)</label><input type="number" id="e_usia" value="${x.usia_bulan||0}" readonly style="background:#f3f4f6"></div>
+          <div class="form-group"><label>Nama Ibu</label><input type="text" id="e_ibu" value="${esc(x.nama_ibu||'')}"></div>
+          <div class="form-group"><label>Nama Ayah</label><input type="text" id="e_ayah" value="${esc(x.nama_ayah||'')}"></div>
+          <div class="form-group full"><label>Alamat Lengkap *</label><input type="text" id="e_alamat" value="${esc(x.alamat||'')}" placeholder="Dusun, RT/RW"></div>
+          <div class="form-group"><label>Desa/Kelurahan *</label>
+            <input type="text" id="e_desa" value="${esc(x.desa||'')}" ${isKader?'readonly style="background:#f3f4f6"':''}>
+          </div>
+          <div class="form-group"><label>Kecamatan *</label>
+            ${isKader 
+              ? `<input type="text" id="e_kec" value="${esc(x.kecamatan||'')}" readonly style="background:#f3f4f6">`
+              : `<select id="e_kec"><option value="">- Pilih -</option>${KECAMATAN.map(k=>`<option ${x.kecamatan===k?'selected':''}>${k}</option>`).join('')}</select>`}
+          </div>
+          <div class="form-group full"><label>No. HP Orang Tua (untuk WA reminder)</label><input type="text" id="e_hp" value="${esc(x.hp_ortu||'')}" placeholder="08xxxxxxxxxx"></div>
+          <div class="form-group"><label>Berat Badan (kg)</label><input type="number" step="0.1" id="e_bb" value="${x.bb||''}"></div>
+          <div class="form-group"><label>Tinggi Badan (cm)</label><input type="number" step="0.1" id="e_tb" value="${x.tb||''}"></div>
+          <div class="form-group"><label>Status Gizi</label>
+            <select id="e_gizi">${['Stunting','Gizi Kurang','Gizi Buruk','Ideal'].map(g=>`<option ${x.status_gizi===g?'selected':''}>${g}</option>`).join('')}</select>
+          </div>
+          <div class="form-group"><label>Status Pendampingan</label>
+            <select id="e_pend">${['Belum Dikunjungi','Sudah Dikunjungi','Dalam Pendampingan','Graduated'].map(g=>`<option ${x.status_pendampingan===g?'selected':''}>${g}</option>`).join('')}</select>
+          </div>
+        </div>`;
+    }
+    
+    // Override saveEdit — auto-assign tim & tandai sumber data
+    window.saveEdit = function(){
+      const isNew = !APP.currentEdit;
+      const nama = document.getElementById('e_nama').value.trim();
+      const alamat = document.getElementById('e_alamat').value.trim();
+      const desa = document.getElementById('e_desa').value.trim();
+      const kec = document.getElementById('e_kec').value;
+      const lahir = document.getElementById('e_lahir').value;
+      
+      if(!nama){ toast('⚠️ Nama balita wajib diisi','error'); return; }
+      if(!lahir){ toast('⚠️ Tanggal lahir wajib diisi','error'); return; }
+      if(!alamat){ toast('⚠️ Alamat wajib diisi','error'); return; }
+      if(!desa){ toast('⚠️ Desa wajib diisi','error'); return; }
+      if(!kec){ toast('⚠️ Kecamatan wajib diisi','error'); return; }
+      
+      const usia = parseInt(document.getElementById('e_usia').value) || 0;
+      const data = {
+        nama, jk:document.getElementById('e_jk').value,
+        tgl_lahir: lahir, usia_bulan: usia,
+        nama_ibu: document.getElementById('e_ibu').value.trim(),
+        nama_ayah: document.getElementById('e_ayah').value.trim(),
+        alamat, desa, kecamatan: kec,
+        hp_ortu: document.getElementById('e_hp').value.trim(),
+        bb: parseFloat(document.getElementById('e_bb').value) || 0,
+        tb: parseFloat(document.getElementById('e_tb').value) || 0,
+        status_gizi: document.getElementById('e_gizi').value,
+        status_pendampingan: document.getElementById('e_pend').value
+      };
+      
+      if(isNew){
+        data.id = 'CS' + Date.now().toString(36).toUpperCase();
+        data.nik = '730000' + Date.now().toString().slice(-10);
+        data.riwayat = [];
+        data.tgl_ukur_terakhir = new Date().toISOString().slice(0,10);
+        
+        // Auto-assign ke tim kader sendiri
+        if(APP.user.role === 'kader' && APP.user.teamId){
+          data.team_id = APP.user.teamId;
+          data.sumber_data = 'Input TPK';
+          data.input_by = APP.user.username;
+          data.input_at = new Date().toISOString();
+        } else {
+          data.team_id = null;
+          data.sumber_data = 'Input Admin';
+        }
+        
+        if(!APP.state.cases) APP.state.cases = [];
+        APP.state.cases.push(data);
+        if(APP.user.role === 'admin') autoAssign();
+        
+        toast('✅ Sasaran baru ditambahkan','success');
+      } else {
+        Object.assign(APP.currentEdit, data);
+        toast('✅ Data diperbarui','success');
+      }
+      saveState();
+      closeModal('modalEdit');
+      updateBadge();
+      const active = document.querySelector('.nav-item.active')?.dataset.view || 'kasus';
+      showView(active, document.querySelector('.nav-item.active'));
+    };
+    
+    console.log('✅ Patch Kader Tambah Sasaran aktif');
+  });
+})();
+</script>
 </body>
 </html>
 </body>
