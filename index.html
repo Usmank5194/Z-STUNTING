@@ -2302,5 +2302,407 @@ window.addEventListener('load', async () => {
   waitReady();
 })();
 </script>
+  <style>
+/* ========== PATCH: UI MEWAH — INPUT & DROPDOWN MODERN ========== */
+:root {
+  --ui-navy: #0f172a;
+  --ui-blue: #0284c7;
+  --ui-blue-light: #e0f2fe;
+  --ui-gold: #f59e0b;
+  --ui-gold-light: #fef3c7;
+  --ui-radius: 10px;
+  --ui-shadow: 0 1px 3px rgba(15,23,42,.06), 0 1px 2px rgba(15,23,42,.04);
+  --ui-shadow-focus: 0 0 0 4px rgba(2,132,199,.15);
+}
+
+/* ====== INPUT & SELECT MODERN ====== */
+.form-group input[type="text"],
+.form-group input[type="password"],
+.form-group input[type="number"],
+.form-group input[type="date"],
+.form-group input[type="email"],
+.form-group input[type="tel"],
+.form-group select,
+.form-group textarea,
+.filters input,
+.filters select,
+.filters input[type="text"],
+.filters input[type="date"] {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 10px;
+  font-size: 14px;
+  font-family: inherit;
+  color: #0f172a;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  box-shadow: var(--ui-shadow);
+  transition: all .2s ease;
+  appearance: none;
+  -webkit-appearance: none;
+  outline: none;
+}
+
+.form-group input:hover,
+.form-group select:hover,
+.form-group textarea:hover,
+.filters input:hover,
+.filters select:hover {
+  border-color: #94a3b8;
+  background: #fff;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus,
+.filters input:focus,
+.filters select:focus {
+  border-color: var(--ui-blue);
+  background: #fff;
+  box-shadow: var(--ui-shadow-focus);
+}
+
+/* ====== DROPDOWN SELECT — CUSTOM ARROW ====== */
+.form-group select,
+.filters select {
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%230284c7' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'/%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 14px;
+  padding-right: 40px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.form-group select:hover,
+.filters select:hover {
+  border-color: var(--ui-blue);
+  background-color: #fff;
+}
+
+/* Options styling (terbatas browser support) */
+.form-group select option,
+.filters select option {
+  padding: 10px;
+  background: #fff;
+  color: #0f172a;
+  font-weight: 500;
+}
+
+/* ====== LABEL MODERN ====== */
+.form-group label {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #334155;
+  letter-spacing: .2px;
+  margin-bottom: 8px;
+  display: block;
+  text-transform: none;
+}
+
+/* Label dengan ikon emoji */
+.form-group label::after {
+  content: '';
+}
+
+/* ====== FORM GROUP SPACING ====== */
+.form-group {
+  margin-bottom: 16px;
+}
+
+/* ====== MODAL HEADER MEWAH ====== */
+.modal-header {
+  background: linear-gradient(135deg, #0f172a 0%, #0284c7 100%);
+  color: #fff;
+  border-radius: 16px 16px 0 0;
+  padding: 20px 24px;
+  border-bottom: none;
+}
+.modal-header h3 {
+  color: #fff;
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: .3px;
+}
+.modal-close {
+  color: rgba(255,255,255,.8);
+  transition: .2s;
+}
+.modal-close:hover {
+  background: rgba(255,255,255,.15);
+  color: #fff;
+}
+
+/* ====== BUTTONS MEWAH ====== */
+.btn {
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: .2px;
+  box-shadow: 0 1px 3px rgba(15,23,42,.08);
+  transition: all .2s ease;
+  border: none;
+}
+.btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(15,23,42,.15);
+}
+.btn:active {
+  transform: translateY(0);
+}
+
+.btn-primary-solid {
+  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+  color: #fff;
+}
+.btn-primary-solid:hover {
+  background: linear-gradient(135deg, #0369a1 0%, #075985 100%);
+}
+
+.btn-warning {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: #fff;
+}
+.btn-warning:hover {
+  background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+}
+
+.btn-danger {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  color: #fff;
+}
+
+.btn-info {
+  background: linear-gradient(135deg, #0891b2 0%, #0e7490 100%);
+  color: #fff;
+}
+
+.btn-outline {
+  background: #fff;
+  border: 1.5px solid #cbd5e1;
+  color: #334155;
+}
+.btn-outline:hover {
+  border-color: var(--ui-blue);
+  color: var(--ui-blue);
+  background: #f0f9ff;
+}
+
+/* ====== SKOR Z CARD MEWAH ====== */
+.zscore-card {
+  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+  border-radius: 14px;
+  padding: 18px 20px;
+  border: 1px solid #86efac;
+  box-shadow: 0 2px 8px rgba(22,163,74,.08);
+  position: relative;
+  overflow: hidden;
+}
+.zscore-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0;
+  width: 4px; height: 100%;
+  background: linear-gradient(180deg, #16a34a, #059669);
+}
+.zscore-card.warn {
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+  border-color: #fcd34d;
+  box-shadow: 0 2px 8px rgba(245,158,11,.1);
+}
+.zscore-card.warn::before {
+  background: linear-gradient(180deg, #f59e0b, #d97706);
+}
+.zscore-card.bad {
+  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+  border-color: #fca5a5;
+  box-shadow: 0 2px 8px rgba(220,38,38,.1);
+}
+.zscore-card.bad::before {
+  background: linear-gradient(180deg, #dc2626, #b91c1c);
+}
+
+.zscore-card > div:first-child {
+  font-size: 13px !important;
+  font-weight: 800 !important;
+  color: #0f172a !important;
+  letter-spacing: .3px;
+  margin-bottom: 10px !important;
+  text-transform: uppercase;
+}
+
+.zscore-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 7px 0;
+  font-size: 13px;
+  border-bottom: 1px dashed rgba(15,23,42,.1);
+}
+.zscore-row:last-child {
+  border-bottom: none;
+  border-top: 2px solid rgba(15,23,42,.15) !important;
+  margin-top: 4px;
+  padding-top: 10px;
+  font-size: 14px;
+}
+.zscore-row b {
+  font-family: 'Courier New', monospace;
+  font-weight: 800;
+  color: #0f172a;
+  font-size: 14px;
+}
+
+/* ====== INFO ROW MEWAH ====== */
+.info-row {
+  padding: 10px 0;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 13.5px;
+}
+.info-row .lbl {
+  color: #64748b;
+  font-weight: 600;
+  font-size: 12.5px;
+}
+.info-row .val {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+/* ====== MODAL BODY MEWAH ====== */
+.modal-body {
+  background: #fafbfc;
+  padding: 24px;
+}
+
+/* ====== CHIP & BADGE ====== */
+.badge {
+  padding: 4px 11px;
+  border-radius: 20px;
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: .3px;
+  box-shadow: 0 1px 2px rgba(0,0,0,.05);
+}
+
+/* ====== STAT CARD MEWAH ====== */
+.stat-card {
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  box-shadow: 0 1px 3px rgba(15,23,42,.05);
+  transition: .2s;
+}
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(2,132,199,.1);
+  border-color: #bae6fd;
+}
+
+/* ====== SIDEBAR NAV MEWAH ====== */
+.nav-item {
+  border-radius: 10px;
+  transition: all .2s;
+}
+.nav-item.active {
+  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+  box-shadow: 0 4px 12px rgba(2,132,199,.3);
+}
+.nav-item:hover:not(.active) {
+  background: #f1f5f9;
+  transform: translateX(2px);
+}
+
+/* ====== FILTERS MEWAH ====== */
+.filters {
+  gap: 10px;
+  padding: 12px;
+  background: #f8fafc;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+}
+
+/* ====== TABLE MEWAH ====== */
+.table-wrap {
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(15,23,42,.04);
+}
+thead {
+  background: linear-gradient(180deg, #f1f5f9 0%, #e2e8f0 100%);
+}
+th {
+  color: #334155;
+  font-weight: 800;
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+}
+tbody tr {
+  transition: .15s;
+}
+tbody tr:hover {
+  background: #f0f9ff !important;
+}
+
+/* ====== TOMBOL PASSWORD MATA ====== */
+.pwd-eye,
+#eyeBtn {
+  color: #0284c7;
+  font-size: 18px;
+  transition: .2s;
+  border-radius: 8px;
+}
+.pwd-eye:hover,
+#eyeBtn:hover {
+  background: #e0f2fe;
+}
+
+/* ====== TOAST MEWAH ====== */
+#toast {
+  border-radius: 12px;
+  font-weight: 600;
+  box-shadow: 0 20px 40px rgba(0,0,0,.3);
+  backdrop-filter: blur(10px);
+}
+#toast.success {
+  background: linear-gradient(135deg, #16a34a, #059669);
+}
+#toast.error {
+  background: linear-gradient(135deg, #dc2626, #b91c1c);
+}
+#toast.warning {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+}
+
+/* ====== PWD WRAP ====== */
+.pwd-wrap {
+  position: relative;
+}
+
+/* ====== MODAL FOOTER ====== */
+.modal-footer {
+  background: #f8fafc;
+  border-radius: 0 0 16px 16px;
+  padding: 16px 24px;
+  border-top: 1px solid #e2e8f0;
+}
+
+/* ====== RESPONSIVE ====== */
+@media (max-width:600px) {
+  .modal-body {
+    padding: 16px;
+  }
+  .modal-header {
+    padding: 16px 20px;
+  }
+  .form-group input,
+  .form-group select {
+    padding: 11px 12px;
+    font-size: 15px; /* biar tidak zoom di iOS */
+  }
+}
+</style>
 </body>
 </html>
