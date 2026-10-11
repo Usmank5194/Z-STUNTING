@@ -1857,5 +1857,278 @@ window.addEventListener('load', async () => {
   waitReady();
 })();
 </script>
+  <script>
+/* ========== PATCH: IMPORT BNBA SEMUA FORMAT ========== */
+(function(){
+  function waitReady(){
+    if(typeof APP !== 'undefined' && typeof saveState === 'function' && typeof autoAssign === 'function'){
+      installMultiImport();
+    } else setTimeout(waitReady, 300);
+  }
+  
+  function installMultiImport(){
+    // Override renderPengaturan — ubah input file terima semua format
+    const origRenderPengaturan = window.renderPengaturan;
+    window.renderPengaturan = function(c){
+      origRenderPengaturan.call(this, c);
+      // Ganti input BNBA agar terima semua format
+      const oldInput = document.getElementById('csvBNBA');
+      if(oldInput){
+        const newInput = document.createElement('input');
+        newInput.type = 'file';
+        newInput.id = 'csvBNBA';
+        newInput.accept = '.csv,.xlsx,.xls,.txt,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv,text/plain';
+        oldInput.parentNode.replaceChild(newInput, oldInput);
+        // Update label
+        const label = newInput.previousElementSibling;
+        if(label && label.tagName === 'LABEL'){
+          label.textContent = 'File Data BNBA (Excel / CSV / TXT)';
+        }
+        // Update hint di bawah tombol
+        const hint = newInput.parentNode.nextElementSibling;
+        if(hint && hint.classList.contains('hint')){
+          hint.innerHTML = `<b>Format didukung:</b> Excel (.xlsx, .xls), CSV, TXT<br>
+            <b>Kolom yang dibutuhkan (baris pertama header):</b><br>
+            <code style="font-size:11px">nik, no_kk, nama, jk, tgl_lahir, usia_bulan, nama_ibu, nama_ayah, alamat, desa, kecamatan, posyandu, hp_ortu, bb, tb, status_gizi</code><br><br>
+            💡 <b>Kolom kosong boleh dihilangkan.</b> Sistem akan cocokkan nama kolom otomatis.`;
+        }
+      }
+    };
+    
+    // Override importBNBA — deteksi tipe file otomatis
+    window.importBNBA = async function(){
+      const f = document.getElementById('csvBNBA').files[0];
+      if(!f){ toast('Pilih file dulu','warning'); return; }
+      
+      showLoading('Membaca file...');
+      try {
+        let rows = [];
+        const ext = f.name.split('.').pop().toLowerCase();
+        
+        if(ext === 'csv' || ext === 'txt'){
+          // Baca CSV/TXT sebagai teks
+          const text = await f.text();
+          rows = parseCSV(text);
+        } else if(ext === 'xlsx' || ext === 'xls'){
+          // Baca Excel via XLSX
+          const buf = await f.arrayBuffer();
+          const wb = XLSX.read(buf, {type:'array'});
+          // Cari sheet yang mengandung kolom "nama" atau "nik"
+          let ws = wb.Sheets[wb.SheetNames[0]];
+          for(const name of wb.SheetNames){
+            const test = XLSX.utils.sheet_to_json(wb.Sheets[name], {header:1, defval:''});
+            if(test.length > 1){
+              const hdr = test[0].map(h => String(h||'').toLowerCase().trim());
+              if(hdr.includes('nama') || hdr.includes('nik') || hdr.includes('name')){
+                ws = wb.Sheets[name];
+                break;
+              }
+            }
+          }
+          const raw = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+          rows = raw;
+        } else {
+          hideLoading();
+          toast('Format file tidak didukung. Gunakan Excel/CSV.','error');
+          return;
+        }
+        
+        if(rows.length < 2){ hideLoading(); toast('File kosong atau tidak ada data','error'); return; }
+        
+        // Deteksi header (baris pertama yang punya >3 kolom terisi)
+        let headerRowIdx = 0;
+        for(let i=0; i<Math.min(5, rows.length); i++){
+          const filled = (rows[i]||[]).filter(v => String(v||'').trim()).length;
+          if(filled >= 3){ headerRowIdx = i; break; }
+        }
+        const headers = (rows[headerRowIdx]||[]).map(h => String(h||'').toLowerCase().trim().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,''));
+        
+        // Alias kolom umum (Indonesia & English)
+        const alias = {
+          'nama_balita':'nama', 'nama_anak':'nama', 'name':'nama', 'nama_lengkap':'nama', 'bayi':'nama', 'balita':'nama',
+          'jenis_kelamin':'jk', 'gender':'jk', 'sex':'jk', 'jenis_kel':'jk',
+          'tanggal_lahir':'tgl_lahir', 'tgl_lhr':'tgl_lahir', 'birth_date':'tgl_lahir', 'birthdate':'tgl_lahir', 'lahir':'tgl_lahir',
+          'umur':'usia_bulan', 'usia':'usia_bulan', 'age':'usia_bulan',
+          'ibu':'nama_ibu', 'mother':'nama_ibu', 'nm_ibu':'nama_ibu',
+          'ayah':'nama_ayah', 'father':'nama_ayah', 'nm_ayah':'nama_ayah',
+          'alamat_lengkap':'alamat', 'address':'alamat',
+          'kelurahan':'desa', 'kel/desa':'desa', 'village':'desa',
+          'kec':'kecamatan', 'district':'kecamatan',
+          'posyandu':'posyandu', 'nama_posyandu':'posyandu',
+          'no_hp':'hp_ortu', 'hp':'hp_ortu', 'telepon':'hp_ortu', 'phone':'hp_ortu', 'wa':'hp_ortu', 'no_wa':'hp_ortu',
+          'berat_badan':'bb', 'berat':'bb', 'weight':'bb',
+          'tinggi_badan':'tb', 'tinggi':'tb', 'height':'tb', 'panjang':'tb',
+          'gizi':'status_gizi', 'status':'status_gizi',
+          'no_kk':'no_kk', 'kartu_keluarga':'no_kk', 'nkk':'no_kk',
+          'nomor_induk':'nik', 'induk':'nik'
+        };
+        const mapped = headers.map(h => alias[h] || h);
+        
+        // Cari index kolom
+        const idx = {
+          nik: mapped.indexOf('nik'),
+          no_kk: mapped.indexOf('no_kk'),
+          nama: mapped.indexOf('nama'),
+          jk: mapped.indexOf('jk'),
+          tgl_lahir: mapped.indexOf('tgl_lahir'),
+          usia_bulan: mapped.indexOf('usia_bulan'),
+          nama_ibu: mapped.indexOf('nama_ibu'),
+          nama_ayah: mapped.indexOf('nama_ayah'),
+          alamat: mapped.indexOf('alamat'),
+          desa: mapped.indexOf('desa'),
+          kecamatan: mapped.indexOf('kecamatan'),
+          posyandu: mapped.indexOf('posyandu'),
+          hp_ortu: mapped.indexOf('hp_ortu'),
+          bb: mapped.indexOf('bb'),
+          tb: mapped.indexOf('tb'),
+          status_gizi: mapped.indexOf('status_gizi')
+        };
+        
+        if(idx.nama === -1){ hideLoading(); toast('Kolom "nama" tidak ditemukan','error'); return; }
+        
+        // Parse baris jadi object
+        const getVal = (row, i) => i >= 0 ? String(row[i]||'').trim() : '';
+        
+        const cases = [];
+        for(let i = headerRowIdx+1; i < rows.length; i++){
+          const r = rows[i];
+          if(!r) continue;
+          const nama = getVal(r, idx.nama);
+          if(!nama) continue;
+          if(nama.toLowerCase() === 'nama' || nama.toLowerCase().includes('nama balita')) continue;
+          
+          let jkRaw = getVal(r, idx.jk).toUpperCase().charAt(0);
+          const jk = (jkRaw === 'L' || jkRaw === 'P') ? jkRaw : 'L';
+          
+          let tgl = getVal(r, idx.tgl_lahir);
+          // Normalize date
+          if(tgl && !tgl.match(/^\d{4}-\d{2}-\d{2}$/)){
+            const d = parseDate(tgl);
+            if(d) tgl = d;
+          }
+          
+          let usia = parseInt(getVal(r, idx.usia_bulan)) || 0;
+          if(!usia && tgl){
+            const d = new Date(tgl);
+            const n = new Date();
+            usia = Math.max(0, (n.getFullYear()-d.getFullYear())*12 + (n.getMonth()-d.getMonth()));
+          }
+          
+          let kec = getVal(r, idx.kecamatan).toUpperCase().trim();
+          
+          cases.push({
+            id: 'CS' + Date.now() + '_' + i,
+            nik: getVal(r, idx.nik) || '',
+            no_kk: getVal(r, idx.no_kk) || '',
+            nama: nama,
+            jk: jk,
+            tgl_lahir: tgl || '',
+            usia_bulan: usia,
+            nama_ibu: getVal(r, idx.nama_ibu) || '',
+            nama_ayah: getVal(r, idx.nama_ayah) || '',
+            alamat: getVal(r, idx.alamat) || '',
+            desa: getVal(r, idx.desa) || '',
+            kecamatan: kec,
+            posyandu: getVal(r, idx.posyandu) || '',
+            hp_ortu: normalizeHP(getVal(r, idx.hp_ortu)),
+            bb: parseFloat(getVal(r, idx.bb)) || 0,
+            tb: parseFloat(getVal(r, idx.tb)) || 0,
+            status_gizi: normalizeGizi(getVal(r, idx.status_gizi)),
+            status_pendampingan: 'Belum Dikunjungi',
+            team_id: null,
+            riwayat: [],
+            tgl_ukur_terakhir: new Date().toISOString().slice(0,10)
+          });
+        }
+        
+        hideLoading();
+        if(cases.length === 0){ toast('Tidak ada data valid','error'); return; }
+        
+        if(!confirm(`Ditemukan ${cases.length} kasus dari file "${f.name}".\n\nImport sekarang?\nData lama (${(APP.state.cases||[]).length}) akan DIGANTI.`)) return;
+        
+        APP.state.cases = cases;
+        autoAssign();
+        saveState();
+        toast(`✅ ${cases.length} kasus diimport + auto-assign ke Tim`,'success');
+        updateBadge();
+        showView('kasus', document.querySelector('.nav-item[data-view="kasus"]'));
+      } catch(e){
+        hideLoading();
+        console.error(e);
+        toast('❌ Gagal baca file: ' + e.message,'error');
+      }
+    };
+    
+    // Parser CSV
+    function parseCSV(text){
+      const lines = text.split(/\r?\n/).filter(l => l.trim());
+      const delim = detectDelimiter(text);
+      return lines.map(line => {
+        const vals = []; let cur = ''; let inQ = false;
+        for(let i=0; i<line.length; i++){
+          const ch = line[i];
+          if(ch === '"'){ if(inQ && line[i+1]==='"'){ cur+='"'; i++; } else inQ = !inQ; }
+          else if(ch === delim && !inQ){ vals.push(cur); cur = ''; }
+          else cur += ch;
+        }
+        vals.push(cur);
+        return vals;
+      });
+    }
+    
+    function detectDelimiter(text){
+      const firstLine = text.split(/\r?\n/)[0] || '';
+      const semis = (firstLine.match(/;/g)||[]).length;
+      const commas = (firstLine.match(/,/g)||[]).length;
+      const tabs = (firstLine.match(/\t/g)||[]).length;
+      if(tabs > commas && tabs > semis) return '\t';
+      if(semis > commas) return ';';
+      return ',';
+    }
+    
+    function parseDate(s){
+      s = String(s||'').trim();
+      // Format: 10/05/2023 atau 10-05-2023
+      let m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+      if(m){
+        let dd = parseInt(m[1]), mm = parseInt(m[2]), yyyy = m[3];
+        // Kalau bulan > 12, tukar dd & mm
+        if(mm > 12){ const t = dd; dd = mm; mm = t; }
+        return `${yyyy}-${String(mm).padStart(2,'0')}-${String(dd).padStart(2,'0')}`;
+      }
+      // Format: 2023/05/10
+      m = s.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/);
+      if(m) return `${m[1]}-${String(m[2]).padStart(2,'0')}-${String(m[3]).padStart(2,'0')}`;
+      // Excel serial number
+      if(/^\d{5}$/.test(s)){
+        const excelEpoch = new Date(1899, 11, 30);
+        const d = new Date(excelEpoch.getTime() + parseInt(s) * 86400000);
+        if(!isNaN(d.getTime())) return d.toISOString().slice(0,10);
+      }
+      return '';
+    }
+    
+    function normalizeHP(hp){
+      hp = String(hp||'').replace(/[^\d+]/g,'');
+      if(hp.startsWith('+62')) hp = '0' + hp.slice(3);
+      if(hp.startsWith('62')) hp = '0' + hp.slice(2);
+      return hp;
+    }
+    
+    function normalizeGizi(g){
+      g = String(g||'').toLowerCase().trim();
+      if(g.includes('stunting') || g.includes('pendek') || g.includes('stunt')) return 'Stunting';
+      if(g.includes('buruk') || g.includes('severe')) return 'Gizi Buruk';
+      if(g.includes('kurang') || g.includes('wasted') || g.includes('underweight')) return 'Gizi Kurang';
+      if(g.includes('ideal') || g.includes('normal') || g.includes('baik') || g.includes('sehat')) return 'Ideal';
+      return 'Ideal';
+    }
+    
+    console.log('✅ Patch Import Multi-Format aktif');
+  }
+  
+  waitReady();
+})();
+</script>
 </body>
 </html>
