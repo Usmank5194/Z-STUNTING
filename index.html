@@ -234,7 +234,7 @@ const teamLabel = id => { const t = findTeam(id); return t ? `${t.desa} · Tim $
 const badgeGizi = s => { const m={'Stunting':'badge-danger','Gizi Kurang':'badge-warning','Gizi Buruk':'badge-danger','Ideal':'badge-success'}; return `<span class="badge ${m[s]||'badge-gray'}">${s||'-'}</span>`; };
 const badgePend = s => { const m={'Belum Dikunjungi':'badge-gray','Sudah Dikunjungi':'badge-info','Dalam Pendampingan':'badge-warning','Graduated':'badge-success'}; return `<span class="badge ${m[s]||'badge-gray'}">${s||'-'}</span>`; };
 const slug = s => String(s||'').toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'');
-const generateUsername = (t) => `${slug(t.kecamatan)}-${slug(t.desa)}-${t.tim}`;
+const generateUsername = (t, index) => 'tpk' + String(index + 1).padStart(3, '0');
 
 function toast(msg, type=''){
   const t = document.getElementById('toast');
@@ -722,8 +722,16 @@ function generateAllAccounts(){
   const tpk = APP.state.tpk || [];
   if(tpk.length === 0){ toast('Import Data TPK dulu di Pengaturan','warning'); return; }
   if(!confirm(`Generate ${tpk.length} akun untuk semua tim TPK?\nAkun lama akan diganti.`)) return;
-  const accounts = tpk.map(t => ({
-    username: generateUsername(t),
+  // Urutkan: kecamatan → desa → tim (biar nomor konsisten)
+  const sorted = tpk.slice().sort((a,b) => {
+    const kc = a.kecamatan.localeCompare(b.kecamatan);
+    if(kc !== 0) return kc;
+    const dc = a.desa.localeCompare(b.desa);
+    if(dc !== 0) return dc;
+    return a.tim - b.tim;
+  });
+  const accounts = sorted.map((t, i) => ({
+    username: generateUsername(t, i),
     password: DEFAULT_PASS,
     teamId: t.teamId
   }));
@@ -1073,9 +1081,20 @@ async function importTPKExcel(){
     if(tpkList.length === 0){ hideLoading(); toast('❌ Tidak ada data TPK','error'); return; }
     if(!confirm(`Import ${tpkList.length} tim TPK?`)){ hideLoading(); return; }
     APP.state.tpk = tpkList;
-    autoAssign();
-    // Auto-generate akun juga
-    APP.state.accounts = tpkList.map(t => ({ username:generateUsername(t), password:DEFAULT_PASS, teamId:t.teamId }));
+autoAssign();
+// Auto-generate akun dengan username pendek
+const sortedTpk = tpkList.slice().sort((a,b) => {
+  const kc = a.kecamatan.localeCompare(b.kecamatan);
+  if(kc !== 0) return kc;
+  const dc = a.desa.localeCompare(b.desa);
+  if(dc !== 0) return dc;
+  return a.tim - b.tim;
+});
+APP.state.accounts = sortedTpk.map((t, i) => ({ 
+  username: 'tpk' + String(i+1).padStart(3, '0'),
+  password: DEFAULT_PASS, 
+  teamId: t.teamId 
+}));
     saveState();
     hideLoading();
     toast(`✅ ${tpkList.length} tim + ${tpkList.length} akun dibuat`,'success');
