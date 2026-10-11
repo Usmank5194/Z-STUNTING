@@ -951,8 +951,9 @@ function saveKunjungan(){
 
 /* ==================== EDIT ==================== */
 function openAddNew(){
-  if(APP.user.role !== 'admin'){ toast('Hanya admin','error'); return; }
   APP.currentEdit = null;
+  ...
+}
   document.getElementById('editTitle').textContent = '➕ Tambah Balita';
   document.getElementById('editBody').innerHTML = buildEditForm({nama:'',jk:'L',tgl_lahir:'',usia_bulan:0,alamat:'',desa:'',kecamatan:'',hp_ortu:'',bb:'',tb:'',status_gizi:'Ideal',status_pendampingan:'Belum Dikunjungi'});
   document.getElementById('modalEdit').classList.add('show');
