@@ -1734,5 +1734,128 @@ window.addEventListener('load', async () => {
   waitReady();
 })();
 </script>
+  <script>
+/* ========== PATCH: RESET PASSWORD KADER ========== */
+(function(){
+  function waitReady(){
+    if(typeof APP !== 'undefined' && typeof saveState === 'function' && typeof showView === 'function'){
+      installReset();
+    } else setTimeout(waitReady, 300);
+  }
+  
+  function installReset(){
+    // Override renderAkun — tambah tombol Reset Password
+    window.renderAkun = function(c){
+      const accounts = APP.state.accounts || [];
+      const tpk = APP.state.tpk || [];
+      c.innerHTML = `
+        <div class="card">
+          <div class="card-header">
+            <div><div class="card-title">🔑 Akun Kader TPK</div><div class="card-sub">${accounts.length} akun dari ${tpk.length} tim</div></div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button class="btn btn-primary-solid" onclick="generateAllAccounts()">⚡ Generate Akun</button>
+              <button class="btn btn-info" onclick="exportAccountsCSV()">📤 Ekspor CSV</button>
+            </div>
+          </div>
+          <div class="hint">
+            <b>Cara reset password kader yang lupa:</b><br>
+            1. Cari username kader di tabel di bawah (atau ketik nama di pencarian)<br>
+            2. Ketuk tombol <b>🔄 Reset</b> di kolom Aksi<br>
+            3. Password akan kembali ke <b>zstunting</b><br>
+            4. Beritahu kader password barunya
+          </div>
+          <div class="filters" style="margin-top:14px">
+            <input type="text" id="akunSearch" placeholder="🔍 Cari username / desa / nama kader..." oninput="filterAkun(this.value)">
+          </div>
+          ${accounts.length === 0 ? '<div class="empty"><div class="ic">🔑</div><div>Belum ada akun. Klik Generate Akun.</div></div>' : `
+          <div class="table-wrap" style="max-height:520px;overflow-y:auto">
+            <table>
+              <thead style="position:sticky;top:0;background:#f9fafb;z-index:1">
+                <tr><th>#</th><th>Username</th><th>Password</th><th>Kecamatan</th><th>Desa</th><th>Tim</th><th>Bidan</th><th>Aksi</th></tr>
+              </thead>
+              <tbody id="akunTbody">
+                ${accounts.map((a,i) => {
+                  const t = tpk.find(x => x.teamId === a.teamId);
+                  const search = (a.username + ' ' + (t?.kecamatan||'') + ' ' + (t?.desa||'') + ' ' + (t?.bidan?.nama||'') + ' ' + (t?.pkk?.nama||'') + ' ' + (t?.kb?.nama||'')).toLowerCase();
+                  const isDefault = a.password === 'zstunting';
+                  return `<tr data-search="${esc(search)}">
+                    <td>${i+1}</td>
+                    <td style="font-family:monospace;font-weight:600">${esc(a.username)}</td>
+                    <td style="font-family:monospace">
+                      ${isDefault 
+                        ? `<span style="color:#16a34a">${esc(a.password)}</span>` 
+                        : `<span style="color:#dc2626">${esc(a.password)}</span> <span style="font-size:10px;color:#6b7280">(sudah diganti)</span>`}
+                    </td>
+                    <td>${t ? esc(t.kecamatan) : '-'}</td>
+                    <td>${t ? esc(t.desa) : '-'}</td>
+                    <td>${t ? 'Tim ' + t.tim : '-'}</td>
+                    <td style="font-size:12px">${t ? esc(t.bidan?.nama||'-') : '-'}</td>
+                    <td style="white-space:nowrap">
+                      <button class="btn btn-sm btn-outline" onclick="resetPasswordKader('${esc(a.username)}')">🔄 Reset</button>
+                    </td>
+                  </tr>`;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>`}
+        </div>`;
+    };
+    
+    // Filter akun
+    window.filterAkun = function(q){
+      q = (q||'').toLowerCase();
+      document.querySelectorAll('#akunTbody tr').forEach(tr => {
+        tr.style.display = (tr.dataset.search||'').includes(q) ? '' : 'none';
+      });
+    };
+    
+    // Reset password kader
+    window.resetPasswordKader = function(username){
+      const acc = (APP.state.accounts||[]).find(a => a.username === username);
+      if(!acc){ toast('Akun tidak ditemukan','error'); return; }
+      const t = (APP.state.tpk||[]).find(x => x.teamId === acc.teamId);
+      
+      document.getElementById('confirmTitle').textContent = '🔄 Reset Password';
+      document.getElementById('confirmBody').innerHTML = `
+        <div style="background:#fef3c7;padding:12px;border-radius:10px;margin-bottom:14px;font-size:13px;line-height:1.6;color:#92400e">
+          ⚠️ Password akan direset ke default <b>zstunting</b>
+        </div>
+        <div class="info-grid">
+          <div class="info-row"><span class="lbl">Username</span><span class="val" style="font-family:monospace">${esc(acc.username)}</span></div>
+          <div class="info-row"><span class="lbl">Kecamatan</span><span class="val">${t ? esc(t.kecamatan) : '-'}</span></div>
+          <div class="info-row"><span class="lbl">Desa</span><span class="val">${t ? esc(t.desa) : '-'}</span></div>
+          <div class="info-row"><span class="lbl">Tim</span><span class="val">${t ? 'Tim ' + t.tim : '-'}</span></div>
+          <div class="info-row"><span class="lbl">Bidan</span><span class="val">${t ? esc(t.bidan?.nama||'-') : '-'}</span></div>
+          ${t?.bidan?.hp ? `<div class="info-row"><span class="lbl">HP Bidan</span><span class="val">${esc(t.bidan.hp)}</span></div>` : ''}
+        </div>
+        <div style="margin-top:14px;padding:12px;background:#f0f9ff;border-radius:8px;font-size:12px;color:#0369a1;line-height:1.6">
+          🔑 Password Baru: <b style="font-family:monospace;font-size:14px">zstunting</b>
+        </div>
+        ${t?.bidan?.hp ? `
+        <a class="wa-link" style="display:flex;justify-content:center;margin-top:14px;padding:10px" 
+           href="https://wa.me/62${t.bidan.hp.replace(/^0/,'')}?text=${encodeURIComponent(
+             `Assalamualaikum Ibu ${t.bidan.nama},\n\nPassword akun Z-STUNTING Anda telah direset.\n\n🔗 Link: https://usmank5194.github.io/SISTUNTING/\n👤 Username: ${acc.username}\n🔑 Password baru: zstunting\n\nSilakan login dan ganti password setelah masuk.\n\nTerima kasih 🙏`
+           )}" target="_blank">
+          💬 Kirim Info ke Bidan via WhatsApp
+        </a>` : ''}`;
+      const btn = document.getElementById('confirmBtn');
+      btn.textContent = '🔄 Reset Sekarang';
+      btn.className = 'btn btn-warning';
+      btn.onclick = () => {
+        acc.password = 'zstunting';
+        saveState();
+        closeModal('modalConfirm');
+        toast('✅ Password ' + username + ' direset ke "zstunting"','success');
+        renderAkun(document.getElementById('content'));
+      };
+      document.getElementById('modalConfirm').classList.add('show');
+    };
+    
+    console.log('✅ Patch Reset Password aktif');
+  }
+  
+  waitReady();
+})();
+</script>
 </body>
 </html>
