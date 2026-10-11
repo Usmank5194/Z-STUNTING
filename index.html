@@ -2130,5 +2130,177 @@ window.addEventListener('load', async () => {
   waitReady();
 })();
 </script>
+  <script>
+/* ========== PATCH: DEFAULT DESA/KECAMATAN UNTUK IMPORT BNBA ========== */
+(function(){
+  function waitReady(){
+    if(typeof APP !== 'undefined' && typeof saveState === 'function' && typeof autoAssign === 'function'){
+      installDefaultWilayah();
+    } else setTimeout(waitReady, 300);
+  }
+  
+  function installDefaultWilayah(){
+    // Override renderPengaturan — tambah dropdown default desa/kecamatan
+    const origRenderPengaturan = window.renderPengaturan;
+    window.renderPengaturan = function(c){
+      origRenderPengaturan.call(this, c);
+      
+      // Cari card import BNBA
+      const cards = c.querySelectorAll('.card');
+      let bnbaCard = null;
+      cards.forEach(card => {
+        if(card.innerHTML.includes('Import Kasus BNBA')) bnbaCard = card;
+      });
+      if(!bnbaCard) return;
+      
+      // Ambil daftar desa dari data TPK
+      const tpk = APP.state.tpk || [];
+      const desaPerKec = {};
+      tpk.forEach(t => {
+        if(!desaPerKec[t.kecamatan]) desaPerKec[t.kecamatan] = new Set();
+        desaPerKec[t.kecamatan].add(t.desa);
+      });
+      const kecList = Object.keys(desaPerKec).sort();
+      
+      // Tambah form default wilayah SEBELUM input file
+      const hintDiv = bnbaCard.querySelector('.hint');
+      const inputGroup = bnbaCard.querySelector('.form-group');
+      if(!inputGroup) return;
+      
+      const defaultDiv = document.createElement('div');
+      defaultDiv.style.cssText = 'background:#e0f2fe;padding:12px;border-radius:10px;margin-bottom:14px;font-size:12.5px;color:#0369a1;line-height:1.6';
+      defaultDiv.innerHTML = `
+        <b>📍 Wilayah Default</b><br>
+        <span style="font-size:11.5px">Jika file BNBA tidak punya kolom desa/kecamatan, gunakan wilayah ini:</span>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
+          <select id="defaultKec" style="padding:8px;border-radius:6px;border:1.5px solid #94a3b8;font-size:13px;background:#fff" onchange="updateDefaultDesa()">
+            <option value="">- Pilih Kecamatan -</option>
+            ${kecList.map(k => `<option value="${k}">${k}</option>`).join('')}
+          </select>
+          <select id="defaultDesa" style="padding:8px;border-radius:6px;border:1.5px solid #94a3b8;font-size:13px;background:#fff">
+            <option value="">- Pilih Desa -</option>
+          </select>
+        </div>
+      `;
+      
+      // Sisipkan setelah form-group pertama
+      inputGroup.parentNode.insertBefore(defaultDiv, inputGroup);
+      
+      // Simpan data desa per kecamatan untuk filter
+      window._desaPerKec = desaPerKec;
+      
+      // Update hint
+      if(hintDiv){
+        hintDiv.innerHTML = `<b>Format didukung:</b> Excel (.xlsx, .xls), CSV, TXT<br>
+          <b>Kolom opsional:</b> <code style="font-size:11px">nik, no_kk, nama, jk, tgl_lahir, usia_bulan, nama_ibu, nama_ayah, alamat, desa, kecamatan, posyandu, hp_ortu, bb, tb, status_gizi</code><br><br>
+          💡 <b>Kalau file tidak punya kolom desa/kecamatan, pilih Wilayah Default di atas.</b><br>
+          💡 Sistem otomatis cocokkan nama kolom (Nama Balita, JK, Tgl Lahir, dll).`;
+      }
+    };
+    
+    // Update dropdown desa saat kecamatan dipilih
+    window.updateDefaultDesa = function(){
+      const kec = document.getElementById('defaultKec').value;
+      const desaSel = document.getElementById('defaultDesa');
+      if(!desaSel) return;
+      if(!kec || !window._desaPerKec || !window._desaPerKec[kec]){
+        desaSel.innerHTML = '<option value="">- Pilih Desa -</option>';
+        return;
+      }
+      const list = Array.from(window._desaPerKec[kec]).sort();
+      desaSel.innerHTML = '<option value="">- Pilih Desa -</option>' + 
+        list.map(d => `<option value="${d}">${d}</option>`).join('');
+    };
+    
+    // Override importBNBA — pakai default wilayah kalau kolom kosong
+    const origImport = window.importBNBA;
+    window.importBNBA = async function(){
+      const f = document.getElementById('csvBNBA')?.files[0];
+      if(!f){ toast('Pilih file dulu','warning'); return; }
+      
+      // Ambil default wilayah
+      const defaultKec = document.getElementById('defaultKec')?.value || '';
+      const defaultDesa = document.getElementById('defaultDesa')?.value || '';
+      
+      if(defaultKec && !defaultDesa){
+        if(!confirm('Kecamatan default sudah dipilih tapi Desa belum.\n\nLanjutkan tanpa desa default?')) return;
+      }
+      
+      // Simpan default ke global agar dibaca oleh importBNBA asli
+      window._defaultKec = defaultKec;
+      window._defaultDesa = defaultDesa;
+      
+      // Panggil import asli — kita patch perilakunya dengan monkey-patch sementara
+      await origImport.call(this);
+    };
+    
+    // Monkey-patch parse logic: intercept setelah parse
+    // Kita perlu intercept autoAssign agar kasus tanpa team_id tetap di-assign via default
+    const origAutoAssign = window.autoAssign;
+    window.autoAssign = function(){
+      // Jalankan yang asli dulu
+      origAutoAssign.call(this);
+      
+      // Fix cases yang belum punya team_id pakai default wilayah
+      const defaultKec = window._defaultKec || '';
+      const defaultDesa = window._defaultDesa || '';
+      if(!defaultKec && !defaultDesa) return;
+      
+      const tpk = APP.state.tpk || [];
+      let fixed = 0;
+      
+      (APP.state.cases||[]).forEach(c => {
+        // Kalau belum punya team_id, coba pakai default
+        if(c.team_id) return;
+        
+        // Isi kecamatan/desa kalau kosong
+        if(!c.kecamatan && defaultKec) c.kecamatan = defaultKec;
+        if(!c.desa && defaultDesa) c.desa = defaultDesa;
+        
+        // Cari tim yang cocok
+        const kk = (c.kecamatan||'').toUpperCase();
+        const kd = (c.desa||'').toUpperCase();
+        if(!kk) return;
+        
+        // Prioritas: desa exact → desa normalized → kecamatan only
+        let pool = tpk.filter(t => t.kecamatan === kk && t.desa.toLowerCase() === kd.toLowerCase());
+        if(!pool.length) pool = tpk.filter(t => t.kecamatan === kk && t.desa.toUpperCase().replace(/[^A-Z0-9]/g,'') === kd.replace(/[^A-Z0-9]/g,''));
+        if(!pool.length) pool = tpk.filter(t => t.kecamatan === kk);
+        if(!pool.length) return;
+        
+        // Round robin sederhana
+        const counters = {};
+        pool.forEach(t => {
+          counters[t.teamId] = (APP.state.cases||[]).filter(c2 => c2.team_id === t.teamId).length;
+        });
+        pool.sort((a,b) => counters[a.teamId] - counters[b.teamId]);
+        c.team_id = pool[0].teamId;
+        fixed++;
+      });
+      
+      if(fixed > 0){
+        console.log(`✅ ${fixed} kasus di-assign ulang pakai wilayah default`);
+      }
+    };
+    
+    // Override saveEdit — alamat tidak lagi wajib
+    const origSaveEdit = window.saveEdit;
+    window.saveEdit = function(){
+      // Cek dulu kalau alamat kosong — kasih peringatan tapi tetap lanjut
+      const alamatEl = document.getElementById('e_alamat');
+      if(alamatEl && !alamatEl.value.trim()){
+        if(!confirm('Alamat masih kosong.\n\nLanjutkan simpan tanpa alamat?')) return;
+        // Isi alamat default supaya tidak error
+        alamatEl.value = '-';
+      }
+      return origSaveEdit.call(this);
+    };
+    
+    console.log('✅ Patch Default Wilayah aktif');
+  }
+  
+  waitReady();
+})();
+</script>
 </body>
 </html>
