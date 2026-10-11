@@ -1410,7 +1410,72 @@ document.addEventListener('click', e => {
   });
 })();
 </script>
-</body>
-</html>
+  <script>
+/* ========== PATCH LOGIN V2 ========== */
+(function(){
+  function applyLoginPatch(){
+    const lv = document.getElementById('loginView');
+    if(!lv) return setTimeout(applyLoginPatch, 200);
+    
+    lv.innerHTML = `
+      <div class="login-card">
+        <div class="login-logo">
+          <img src="logo.png" alt="Z-STUNTING" style="max-width:180px;width:100%;height:auto;filter:drop-shadow(0 6px 16px rgba(2,132,199,0.35));margin-bottom:12px" onerror="this.style.display='none'">
+          <p style="color:#6b7280;font-size:12px;margin-top:4px;font-weight:600;letter-spacing:.5px">DP2KBP3A Kabupaten Jeneponto</p>
+          <p style="font-size:10.5px;color:#9ca3af;margin-top:2px">Sistem Pendampingan Keluarga Stunting</p>
+        </div>
+        <form onsubmit="doLogin(event)">
+          <div class="form-group">
+            <label>Username</label>
+            <input type="text" id="username" placeholder="Contoh: tpk001" required autocomplete="username" autocapitalize="none">
+          </div>
+          <div class="form-group">
+            <label>Password</label>
+            <div style="position:relative">
+              <input type="password" id="password" placeholder="Password" required autocomplete="current-password" style="padding-right:44px">
+              <button type="button" onclick="togglePwd()" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;font-size:18px;cursor:pointer;padding:6px" id="eyeBtn">👁️</button>
+            </div>
+          </div>
+          <button type="submit" class="btn-primary">🔐 Masuk</button>
+        </form>
+        <div class="login-note">
+          <b>👤 Kader TPK:</b> Username dari Penyuluh KB (contoh: <i>tpk001</i>)<br>
+          <b>🔑 Admin:</b> <i>penyuluh</i> / <i>zstunting2026</i><br>
+          <b>❓ Lupa password?</b> Hubungi Penyuluh KB
+        </div>
+      </div>`;
+  }
+  
+  function patchLogin(){
+    if(typeof doLogin !== 'function' || typeof ADMIN_USER === 'undefined'){
+      setTimeout(patchLogin, 200); return;
+    }
+    const orig = window.doLogin;
+    window.doLogin = async function(e){
+      e.preventDefault();
+      const u = document.getElementById('username').value.trim().toLowerCase();
+      const p = document.getElementById('password').value;
+      // Terima beberapa varian password admin
+      if(u === 'penyuluh' && (p === 'zstunting2026' || p === 'zstunting' || p === 'admin123' || p === 'penyuluh123')){
+        document.getElementById('password').value = ADMIN_USER.password;
+      }
+      return orig.call(this, e);
+    };
+  }
+  
+  window.togglePwd = function(){
+    const p = document.getElementById('password');
+    const b = document.getElementById('eyeBtn');
+    if(p.type === 'password'){ p.type = 'text'; b.textContent = '🙈'; }
+    else { p.type = 'password'; b.textContent = '👁️'; }
+  };
+  
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', () => { applyLoginPatch(); patchLogin(); });
+  } else {
+    applyLoginPatch(); patchLogin();
+  }
+})();
+</script>
 </body>
 </html>
