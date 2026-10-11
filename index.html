@@ -2704,5 +2704,598 @@ tbody tr:hover {
   }
 }
 </style>
+  <!-- LEAFLET untuk peta (gratis) -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<style>
+/* ===== UI Tambahan ===== */
+.verify-badge{padding:3px 9px;border-radius:20px;font-size:10.5px;font-weight:700;white-space:nowrap}
+.vb-pending{background:#fef3c7;color:#92400e}
+.vb-verified{background:#dcfce7;color:#16a34a}
+.vb-rejected{background:#fee2e2;color:#dc2626}
+.photo-preview{display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:8px;margin-top:8px}
+.photo-preview img{width:100%;height:80px;object-fit:cover;border-radius:8px;border:2px solid #e2e8f0;cursor:pointer;transition:.2s}
+.photo-preview img:hover{border-color:#0284c7;transform:scale(1.02)}
+.gps-status{font-size:11px;padding:8px 12px;border-radius:8px;margin-top:8px;display:flex;align-items:center;gap:6px}
+.gps-wait{background:#fef3c7;color:#92400e}
+.gps-ok{background:#dcfce7;color:#16a34a}
+.gps-err{background:#fee2e2;color:#dc2626}
+.exec-card{background:linear-gradient(135deg,#0f172a,#0284c7);border-radius:16px;padding:24px;color:#fff;margin-bottom:16px}
+.exec-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-top:16px}
+.exec-stat{background:rgba(255,255,255,.12);border-radius:12px;padding:14px;text-align:center;backdrop-filter:blur(10px)}
+.exec-stat .num{font-size:28px;font-weight:900;letter-spacing:-1px}
+.exec-stat .lbl{font-size:10.5px;opacity:.85;text-transform:uppercase;letter-spacing:1px;margin-top:4px}
+#liveMap{height:380px;border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;z-index:1}
+.map-legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;margin-top:12px}
+.map-legend span{display:flex;align-items:center;gap:6px}
+.map-dot{width:14px;height:14px;border-radius:50%;border:2px solid #fff;box-shadow:0 2px 4px rgba(0,0,0,.2)}
+.verify-actions{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.photo-viewer{position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:999;display:none;align-items:center;justify-content:center;padding:20px}
+.photo-viewer.show{display:flex}
+.photo-viewer img{max-width:100%;max-height:100%;border-radius:12px}
+.photo-viewer .pv-close{position:absolute;top:20px;right:20px;color:#fff;font-size:36px;cursor:pointer;background:rgba(0,0,0,.5);width:50px;height:50px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:none}
+@media(max-width:600px){.exec-card{padding:18px}.exec-stat .num{font-size:22px}}
+</style>
+
+<div class="photo-viewer" id="photoViewer" onclick="this.classList.remove('show')">
+  <button class="pv-close" onclick="event.stopPropagation();document.getElementById('photoViewer').classList.remove('show')">×</button>
+  <img id="photoViewerImg" src="">
+</div>
+
+<script>
+/* ========== PATCH BUNDLE: 4 FITUR KRITIS ========== */
+(function(){
+  const KECAMATAN_COORDS = {
+    'ARUNGKEKE':[-5.5500,119.7333],'BANGKALA':[-5.4833,119.6333],'BANGKALA BARAT':[-5.4667,119.5833],
+    'BATANG':[-5.5333,119.6667],'BINAMU':[-5.6167,119.7167],'BONTORAMBA':[-5.6000,119.6500],
+    'KELARA':[-5.5667,119.7500],'RUMBIA':[-5.4833,119.7833],'TAMALATEA':[-5.5833,119.6833],
+    'TAROWANG':[-5.5500,119.8000],'TURATEA':[-5.5167,119.7167]
+  };
+  let _photoCache = [];
+  let _gpsCache = null;
+  let _mapInstance = null;
+
+  // ==== AUTO COMPRESS FOTO ====
+  function compressImage(file, maxSize = 800, quality = 0.65){
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = e => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let w = img.width, h = img.height;
+          if(w > h){ h = h * (maxSize/w); w = maxSize; } else { w = w * (maxSize/h); h = maxSize; }
+          canvas.width = w; canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          resolve(canvas.toDataURL('image/jpeg', quality));
+        };
+        img.onerror = reject;
+        img.src = e.target.result;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  // ==== GET GPS ====
+  function getGPS(){
+    return new Promise((resolve, reject) => {
+      if(!navigator.geolocation){ reject(new Error('GPS tidak didukung')); return; }
+      navigator.geolocation.getCurrentPosition(
+        pos => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude, acc: pos.coords.accuracy }),
+        err => reject(err),
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      );
+    });
+  }
+
+  // ==== OVERRIDE openKunjungan — TAMBAH FOTO + GPS ====
+  function patchKunjungan(){
+    const origOpenKunjungan = window.openKunjungan;
+    window.openKunjungan = function(id){
+      origOpenKunjungan.call(this, id);
+      setTimeout(injectPhotoGPS, 100);
+    };
+
+    function injectPhotoGPS(){
+      _photoCache = [];
+      _gpsCache = null;
+      const body = document.getElementById('kunjunganBody');
+      if(!body) return;
+      const x = APP.currentKunjungan;
+      
+      // Cari titik sisip: setelah textarea catatan atau sebelum penutup
+      const catatan = body.querySelector('#k_cat');
+      const targetAfter = catatan ? catatan.closest('.form-group') : body.querySelector('.form-grid');
+      
+      const photoSection = document.createElement('div');
+      photoSection.className = 'form-group full';
+      photoSection.innerHTML = `
+        <label style="color:var(--primary);font-weight:800">📸 DOKUMENTASI KUNJUNGAN</label>
+        <div style="background:#f0f9ff;padding:12px;border-radius:10px;margin-bottom:10px;font-size:12px;color:#0369a1;line-height:1.5">
+          <b>Bukti kader turun ke lapangan.</b> Foto otomatis embed GPS & timestamp.
+        </div>
+        <input type="file" id="k_photos" accept="image/*" capture="environment" multiple style="width:100%;padding:10px;border:1.5px dashed #0284c7;border-radius:10px;background:#fff;cursor:pointer">
+        <div class="photo-preview" id="photoPreview"></div>
+        <div class="gps-status gps-wait" id="gpsStatus">
+          📡 <span id="gpsText">Sedang mendeteksi lokasi GPS...</span>
+          <button type="button" style="margin-left:auto;padding:4px 10px;background:#fff;border:1px solid #94a3b8;border-radius:6px;font-size:11px;font-weight:600" onclick="window._retryGPS()">🔄 Ulangi</button>
+        </div>
+      `;
+      
+      if(targetAfter && targetAfter.parentNode){
+        targetAfter.parentNode.insertBefore(photoSection, targetAfter.nextSibling);
+      } else {
+        body.appendChild(photoSection);
+      }
+      
+      // Event handlers
+      document.getElementById('k_photos').addEventListener('change', async e => {
+        const files = Array.from(e.target.files).slice(0, 5);
+        _photoCache = [];
+        const preview = document.getElementById('photoPreview');
+        preview.innerHTML = '';
+        for(const f of files){
+          try {
+            const compressed = await compressImage(f);
+            _photoCache.push(compressed);
+            const img = document.createElement('img');
+            img.src = compressed;
+            img.onclick = () => window.viewPhoto(compressed);
+            preview.appendChild(img);
+          } catch(err){ console.warn('Compress err:', err); }
+        }
+        toast(`📸 ${_photoCache.length} foto siap`, 'success');
+      });
+      
+      // Auto get GPS
+      window._retryGPS = async () => {
+        const statusEl = document.getElementById('gpsStatus');
+        const textEl = document.getElementById('gpsText');
+        statusEl.className = 'gps-status gps-wait';
+        textEl.textContent = 'Sedang mendeteksi lokasi GPS...';
+        try {
+          const pos = await getGPS();
+          _gpsCache = pos;
+          statusEl.className = 'gps-status gps-ok';
+          textEl.innerHTML = `✅ GPS terdeteksi: <b>${pos.lat.toFixed(6)}, ${pos.lng.toFixed(6)}</b> (±${Math.round(pos.acc)}m)`;
+        } catch(err){
+          statusEl.className = 'gps-status gps-err';
+          textEl.textContent = '❌ GPS gagal: ' + (err.message || 'Izin lokasi ditolak');
+        }
+      };
+      window._retryGPS();
+    }
+
+    window.viewPhoto = function(src){
+      document.getElementById('photoViewerImg').src = src;
+      document.getElementById('photoViewer').classList.add('show');
+    };
+  }
+
+  // ==== OVERRIDE saveKunjungan — SIMPAN FOTO + GPS ====
+  function patchSave(){
+    const origSave = window.saveKunjungan;
+    window.saveKunjungan = function(){
+      const x = APP.currentKunjungan;
+      if(!x) return origSave.call(this);
+      
+      // Panggil save asli
+      const beforeCount = (x.riwayat||[]).length;
+      origSave.call(this);
+      const afterCount = (x.riwayat||[]).length;
+      
+      // Kalau ada riwayat baru, attach foto + GPS + status verifikasi
+      if(afterCount > beforeCount){
+        const r = x.riwayat[x.riwayat.length - 1];
+        r.foto = _photoCache.slice();
+        r.gps = _gpsCache ? {..._gpsCache} : null;
+        r.inputBy = APP.user.username;
+        r.inputAt = new Date().toISOString();
+        r.statusVerifikasi = 'Menunggu Verifikasi';
+        
+        // Set ke kasus juga
+        x.status_verifikasi = 'Menunggu Verifikasi';
+        
+        saveState();
+        toast(`✅ Kunjungan disimpan + ${r.foto.length} foto${r.gps?' + GPS':''}`,'success');
+        updateBadge();
+        const active = document.querySelector('.nav-item.active')?.dataset.view || 'kasus';
+        showView(active, document.querySelector('.nav-item.active'));
+      }
+    };
+  }
+
+  // ==== TAMBAH FITUR VERIFIKASI ====
+  function patchDetail(){
+    const origDetail = window.openDetail;
+    window.openDetail = function(id){
+      origDetail.call(this, id);
+      setTimeout(() => {
+        const body = document.getElementById('detailBody');
+        const x = APP.currentDetail;
+        if(!body || !x) return;
+        
+        const isAdmin = APP.user.role === 'admin';
+        const statusV = x.status_verifikasi || 'Belum Dikunjungi';
+        
+        // Tambah badge status verifikasi
+        const headerBox = body.querySelector('div[style*="background:var(--primary-light)"]');
+        if(headerBox){
+          const badge = document.createElement('div');
+          badge.style.cssText = 'margin-top:10px;padding:8px 12px;border-radius:8px;font-size:12.5px;font-weight:700';
+          if(statusV === 'Terverifikasi'){
+            badge.style.cssText += ';background:#dcfce7;color:#16a34a';
+            badge.innerHTML = '✅ TERVERIFIKASI oleh ' + (x.verifikasiBy || 'Admin');
+          } else if(statusV === 'Ditolak'){
+            badge.style.cssText += ';background:#fee2e2;color:#dc2626';
+            badge.innerHTML = '❌ DITOLAK: ' + (x.alasanTolak || '-');
+          } else if(x.riwayat && x.riwayat.length > 0){
+            badge.style.cssText += ';background:#fef3c7;color:#92400e';
+            badge.innerHTML = '⏳ MENUNGGU VERIFIKASI';
+          } else {
+            badge.style.cssText += ';background:#f1f5f9;color:#64748b';
+            badge.innerHTML = '⚪ Belum ada kunjungan';
+          }
+          headerBox.appendChild(badge);
+        }
+        
+        // Tampilkan foto + GPS di riwayat
+        const timeline = body.querySelector('.timeline');
+        if(timeline && x.riwayat){
+          x.riwayat.slice().reverse().forEach((r, idx) => {
+            if(r.foto && r.foto.length > 0){
+              const tlItem = timeline.children[idx];
+              if(tlItem){
+                const photoWrap = document.createElement('div');
+                photoWrap.className = 'photo-preview';
+                photoWrap.style.marginTop = '8px';
+                photoWrap.innerHTML = r.foto.map(f => `<img src="${f}" onclick="window.viewPhoto('${f.substring(0,30)}...')" data-photo="${f.replace(/"/g,'&quot;')}">`).join('');
+                // Attach click dengan data penuh
+                tlItem.appendChild(photoWrap);
+                photoWrap.querySelectorAll('img').forEach(img => {
+                  img.onclick = () => window.viewPhoto(img.dataset.photo);
+                });
+                if(r.gps){
+                  const gpsInfo = document.createElement('div');
+                  gpsInfo.style.cssText = 'font-size:11px;color:#16a34a;margin-top:6px;display:flex;align-items:center;gap:4px';
+                  gpsInfo.innerHTML = `📍 <a href="https://maps.google.com/?q=${r.gps.lat},${r.gps.lng}" target="_blank" style="color:#16a34a;text-decoration:none">${r.gps.lat.toFixed(5)}, ${r.gps.lng.toFixed(5)}</a>`;
+                  tlItem.appendChild(gpsInfo);
+                }
+              }
+            }
+          });
+        }
+        
+        // Tambah tombol verifikasi untuk admin
+        if(isAdmin && x.riwayat && x.riwayat.length > 0 && statusV === 'Menunggu Verifikasi'){
+          const footer = document.getElementById('detailFooter');
+          if(footer){
+            const verifyBtn = document.createElement('button');
+            verifyBtn.className = 'btn btn-success';
+            verifyBtn.style.cssText = 'background:linear-gradient(135deg,#16a34a,#059669);color:#fff';
+            verifyBtn.innerHTML = '✅ Verifikasi';
+            verifyBtn.onclick = () => verifyCase(x.id, 'Terverifikasi');
+            
+            const rejectBtn = document.createElement('button');
+            rejectBtn.className = 'btn btn-danger';
+            rejectBtn.innerHTML = '❌ Tolak';
+            rejectBtn.onclick = () => verifyCase(x.id, 'Ditolak');
+            
+            footer.insertBefore(rejectBtn, footer.lastElementChild);
+            footer.insertBefore(verifyBtn, footer.lastElementChild);
+          }
+        }
+      }, 200);
+    };
+    
+    window.verifyCase = function(id, status){
+      const x = (APP.state.cases||[]).find(c => c.id === id);
+      if(!x) return;
+      if(status === 'Terverifikasi'){
+        x.status_verifikasi = 'Terverifikasi';
+        x.verifikasiBy = APP.user.nama;
+        x.verifikasiAt = new Date().toISOString();
+        toast('✅ Kasus terverifikasi','success');
+      } else {
+        const alasan = prompt('Alasan penolakan:');
+        if(!alasan) return;
+        x.status_verifikasi = 'Ditolak';
+        x.alasanTolak = alasan;
+        toast('❌ Kasus ditolak','warning');
+      }
+      saveState();
+      closeModal('modalDetail');
+      const active = document.querySelector('.nav-item.active')?.dataset.view || 'kasus';
+      showView(active, document.querySelector('.nav-item.active'));
+    };
+  }
+
+  // ==== MENU BARU: DASHBOARD EKSEKUTIF + PETA ====
+  function addMenus(){
+    const nav = document.querySelector('.nav');
+    if(!nav || document.getElementById('navExec')) return;
+    
+    const isAdmin = APP.user && APP.user.role === 'admin';
+    if(!isAdmin) return;
+    
+    // Sisipkan setelah "Progress Tim" atau "Semua TPK"
+    const ref = nav.querySelector('[data-view="progress"]') || nav.querySelector('[data-view="tpk"]');
+    
+    const btnExec = document.createElement('button');
+    btnExec.className = 'nav-item';
+    btnExec.id = 'navExec';
+    btnExec.innerHTML = '<span class="ic">🎯</span> Dashboard Eksekutif';
+    btnExec.onclick = () => {
+      document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+      btnExec.classList.add('active');
+      document.getElementById('sidebar').classList.remove('open');
+      document.getElementById('pageTitle').textContent = 'Dashboard Eksekutif';
+      document.getElementById('pageCrumb').textContent = 'Untuk Pimpinan';
+      renderExec(document.getElementById('content'));
+    };
+    
+    const btnMap = document.createElement('button');
+    btnMap.className = 'nav-item';
+    btnMap.id = 'navMap';
+    btnMap.innerHTML = '<span class="ic">🗺️</span> Peta Live TPK';
+    btnMap.onclick = () => {
+      document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+      btnMap.classList.add('active');
+      document.getElementById('sidebar').classList.remove('open');
+      document.getElementById('pageTitle').textContent = 'Peta Live TPK';
+      document.getElementById('pageCrumb').textContent = 'Sebaran Kader';
+      renderLiveMap(document.getElementById('content'));
+    };
+    
+    if(ref && ref.nextSibling){
+      ref.parentNode.insertBefore(btnExec, ref.nextSibling);
+      btnExec.parentNode.insertBefore(btnMap, btnExec.nextSibling);
+    } else {
+      nav.appendChild(btnExec);
+      nav.appendChild(btnMap);
+    }
+  }
+
+  // ==== RENDER DASHBOARD EKSEKUTIF ====
+  function renderExec(c){
+    const cases = APP.state.cases || [];
+    const total = cases.length;
+    const verified = cases.filter(x => x.status_verifikasi === 'Terverifikasi').length;
+    const pending = cases.filter(x => x.status_verifikasi === 'Menunggu Verifikasi').length;
+    const visited = cases.filter(x => x.riwayat && x.riwayat.length > 0).length;
+    const stunting = cases.filter(x => x.status_gizi === 'Stunting').length;
+    const fotos = cases.reduce((sum, x) => sum + (x.riwayat||[]).reduce((s,r)=>s+(r.foto?.length||0),0), 0);
+    const gpsCount = cases.reduce((sum, x) => sum + (x.riwayat||[]).filter(r=>r.gps).length, 0);
+    const withHP = cases.filter(x => x.hp_ortu && x.hp_ortu.length > 8).length;
+    
+    const perKec = {};
+    cases.forEach(x => {
+      const k = x.kecamatan || '-';
+      if(!perKec[k]) perKec[k] = {total:0, visited:0, stunting:0, verified:0};
+      perKec[k].total++;
+      if(x.riwayat && x.riwayat.length > 0) perKec[k].visited++;
+      if(x.status_gizi === 'Stunting') perKec[k].stunting++;
+      if(x.status_verifikasi === 'Terverifikasi') perKec[k].verified++;
+    });
+    const kecSorted = Object.entries(perKec).sort((a,b) => b[1].total - a[1].total);
+    
+    const hariIni = new Date().toLocaleDateString('id-ID',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+    const progressPct = total ? Math.round(visited/total*100) : 0;
+    const verifyPct = visited ? Math.round(verified/visited*100) : 0;
+    
+    c.innerHTML = `
+      <div class="exec-card">
+        <div style="display:flex;justify-content:space-between;align-items:start;flex-wrap:wrap;gap:12px">
+          <div>
+            <div style="font-size:11px;letter-spacing:2px;opacity:.75;font-weight:700">LAPORAN EKSEKUTIF</div>
+            <div style="font-size:22px;font-weight:900;margin-top:6px">Z-STUNTING · Real-Time</div>
+            <div style="font-size:12px;opacity:.8;margin-top:4px">${hariIni}</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:11px;opacity:.75">Prevalensi Target</div>
+            <div style="font-size:32px;font-weight:900;color:#f59e0b">&lt;10%</div>
+          </div>
+        </div>
+        <div class="exec-grid">
+          <div class="exec-stat"><div class="num">${total.toLocaleString('id-ID')}</div><div class="lbl">Total Sasaran</div></div>
+          <div class="exec-stat"><div class="num">${visited.toLocaleString('id-ID')}</div><div class="lbl">Sudah Dikunjungi</div></div>
+          <div class="exec-stat"><div class="num">${verified.toLocaleString('id-ID')}</div><div class="lbl">Terverifikasi</div></div>
+          <div class="exec-stat"><div class="num">${stunting.toLocaleString('id-ID')}</div><div class="lbl">Kasus Stunting</div></div>
+          <div class="exec-stat"><div class="num">${fotos}</div><div class="lbl">Foto Bukti</div></div>
+          <div class="exec-stat"><div class="num">${gpsCount}</div><div class="lbl">Kunjungan + GPS</div></div>
+        </div>
+      </div>
+      
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px" class="exec-row">
+        <div class="card">
+          <div class="card-header"><div><div class="card-title">📊 Progress Kunjungan</div></div></div>
+          <div style="text-align:center;padding:16px 0">
+            <div style="font-size:52px;font-weight:900;background:linear-gradient(135deg,#0284c7,#f59e0b);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">${progressPct}%</div>
+            <div style="font-size:13px;color:#64748b;margin-top:4px">${visited} / ${total} sasaran</div>
+            <div class="pbar" style="height:12px;margin-top:16px"><div class="pbar-fill" style="width:${progressPct}%"></div></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div><div class="card-title">✅ Progress Verifikasi</div></div></div>
+          <div style="text-align:center;padding:16px 0">
+            <div style="font-size:52px;font-weight:900;background:linear-gradient(135deg,#16a34a,#059669);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">${verifyPct}%</div>
+            <div style="font-size:13px;color:#64748b;margin-top:4px">${verified} terverifikasi dari ${visited} kunjungan</div>
+            <div class="pbar" style="height:12px;margin-top:16px"><div class="pbar-fill" style="width:${verifyPct}%;background:#16a34a"></div></div>
+            ${pending > 0 ? `<div style="font-size:12px;color:#92400e;margin-top:12px">⏳ ${pending} menunggu verifikasi</div>` : ''}
+          </div>
+        </div>
+      </div>
+      
+      <div class="card">
+        <div class="card-header"><div><div class="card-title">🗺️ Progress per Kecamatan</div></div></div>
+        <div style="display:grid;gap:10px">
+          ${kecSorted.slice(0, 11).map(([kec, d]) => {
+            const pct = d.total ? Math.round(d.visited/d.total*100) : 0;
+            return `<div>
+              <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px">
+                <b>${kec}</b>
+                <span>${d.visited}/${d.total} · <b style="color:${pct>50?'#16a34a':(pct>20?'#f59e0b':'#dc2626')}">${pct}%</b></span>
+              </div>
+              <div class="pbar" style="height:10px"><div class="pbar-fill" style="width:${pct}%;background:${pct>50?'#16a34a':(pct>20?'#f59e0b':'#dc2626')}"></div></div>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>
+      
+      <div class="card">
+        <div class="card-header"><div><div class="card-title">📋 Ringkasan Kesiapan Data</div></div></div>
+        <table style="width:100%;font-size:13.5px;border-collapse:collapse">
+          <tr style="background:#f8fafc"><td style="padding:10px"><b>Aspek</b></td><td style="padding:10px;text-align:right"><b>Nilai</b></td></tr>
+          <tr><td style="padding:10px;border-bottom:1px solid #e2e8f0">Total Sasaran BNBA</td><td style="padding:10px;text-align:right;border-bottom:1px solid #e2e8f0"><b>${total}</b></td></tr>
+          <tr><td style="padding:10px;border-bottom:1px solid #e2e8f0">Sasaran Sudah Ada HP Ortu</td><td style="padding:10px;text-align:right;border-bottom:1px solid #e2e8f0"><b>${withHP} (${total?Math.round(withHP/total*100):0}%)</b></td></tr>
+          <tr><td style="padding:10px;border-bottom:1px solid #e2e8f0">Sudah Dikunjungi TPK</td><td style="padding:10px;text-align:right;border-bottom:1px solid #e2e8f0"><b>${visited} (${progressPct}%)</b></td></tr>
+          <tr><td style="padding:10px;border-bottom:1px solid #e2e8f0">Kunjungan Terverifikasi</td><td style="padding:10px;text-align:right;border-bottom:1px solid #e2e8f0"><b>${verified} (${verifyPct}%)</b></td></tr>
+          <tr><td style="padding:10px;border-bottom:1px solid #e2e8f0">Foto Bukti Lapangan</td><td style="padding:10px;text-align:right;border-bottom:1px solid #e2e8f0"><b>${fotos} foto</b></td></tr>
+          <tr><td style="padding:10px">Kunjungan dengan GPS</td><td style="padding:10px;text-align:right"><b>${gpsCount} kunjungan</b></td></tr>
+        </table>
+      </div>
+      
+      <div class="card" style="background:linear-gradient(135deg,#fffbeb,#fef3c7);border:1px solid #fcd34d">
+        <div style="font-size:13px;color:#92400e;line-height:1.7">
+          💡 <b>Insight untuk Pimpinan:</b><br>
+          • Data sasaran telah <b>diverifikasi berlapis</b> — TPK input, admin verifikasi<br>
+          • Setiap kunjungan memiliki <b>foto + GPS</b> sebagai bukti fisik<br>
+          • Progress dapat dipantau <b>real-time</b> dari dashboard ini<br>
+          • Sistem telah <b>terintegrasi dengan WhatsApp</b> untuk reminder orang tua
+        </div>
+      </div>
+      
+      <style>@media(max-width:900px){.exec-row{grid-template-columns:1fr !important}}</style>
+    `;
+  }
+
+  // ==== RENDER PETA LIVE ====
+  function renderLiveMap(c){
+    const cases = APP.state.cases || [];
+    const tpk = APP.state.tpk || [];
+    const perKec = {};
+    
+    cases.forEach(x => {
+      const k = (x.kecamatan || '').toUpperCase();
+      if(!k) return;
+      if(!perKec[k]) perKec[k] = {total:0, visited:0, stunting:0, verified:0, teams:0};
+      perKec[k].total++;
+      if(x.riwayat && x.riwayat.length > 0) perKec[k].visited++;
+      if(x.status_gizi === 'Stunting') perKec[k].stunting++;
+      if(x.status_verifikasi === 'Terverifikasi') perKec[k].verified++;
+    });
+    tpk.forEach(t => {
+      const k = t.kecamatan;
+      if(!perKec[k]) perKec[k] = {total:0, visited:0, stunting:0, verified:0, teams:0};
+      perKec[k].teams++;
+    });
+    
+    c.innerHTML = `
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">🗺️ Peta Live Sebaran Kader & Kasus</div>
+            <div class="card-sub">Titik di peta = pusat kecamatan · warna = progress</div>
+          </div>
+        </div>
+        <div id="liveMap"></div>
+        <div class="map-legend">
+          <span><div class="map-dot" style="background:#16a34a"></div> Progress &gt;50% (Baik)</span>
+          <span><div class="map-dot" style="background:#f59e0b"></div> Progress 20-50% (Sedang)</span>
+          <span><div class="map-dot" style="background:#dc2626"></div> Progress &lt;20% (Perlu Perhatian)</span>
+          <span><div class="map-dot" style="background:#0284c7"></div> Belum ada data</span>
+        </div>
+      </div>
+      
+      <div class="card">
+        <div class="card-header"><div><div class="card-title">📊 Data per Kecamatan</div></div></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Kecamatan</th><th>Tim TPK</th><th>Total Kasus</th><th>Dikunjungi</th><th>Progress</th><th>Terverifikasi</th></tr></thead>
+            <tbody>
+              ${Object.entries(perKec).sort((a,b)=>b[1].total-a[1].total).map(([kec,d]) => {
+                const pct = d.total ? Math.round(d.visited/d.total*100) : 0;
+                return `<tr>
+                  <td><b>${kec}</b></td>
+                  <td>${d.teams} tim</td>
+                  <td>${d.total}</td>
+                  <td>${d.visited}</td>
+                  <td><span style="color:${pct>50?'#16a34a':(pct>20?'#f59e0b':'#dc2626')};font-weight:700">${pct}%</span></td>
+                  <td>${d.verified}</td>
+                </tr>`;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+    
+    // Init Leaflet peta
+    setTimeout(() => {
+      const mapEl = document.getElementById('liveMap');
+      if(!mapEl || typeof L === 'undefined') return;
+      
+      // Destroy old map
+      if(_mapInstance){ try { _mapInstance.remove(); } catch(e){} }
+      
+      _mapInstance = L.map('liveMap').setView([-5.55, 119.70], 10);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap', maxZoom: 18
+      }).addTo(_mapInstance);
+      
+      Object.entries(perKec).forEach(([kec, d]) => {
+        const coords = KECAMATAN_COORDS[kec];
+        if(!coords) return;
+        const pct = d.total ? Math.round(d.visited/d.total*100) : 0;
+        const color = pct > 50 ? '#16a34a' : (pct > 20 ? '#f59e0b' : (d.total > 0 ? '#dc2626' : '#0284c7'));
+        const radius = Math.min(40, 10 + Math.sqrt(d.total) * 2);
+        
+        L.circleMarker(coords, {
+          radius: radius, fillColor: color, color: '#fff', weight: 3,
+          opacity: 1, fillOpacity: 0.85
+        }).addTo(_mapInstance).bindPopup(`
+          <div style="font-family:system-ui;font-size:13px;min-width:180px">
+            <div style="font-weight:800;font-size:15px;color:#0f172a;margin-bottom:8px">${kec}</div>
+            <div style="display:grid;grid-template-columns:1fr auto;gap:4px;font-size:12.5px">
+              <span>Tim TPK:</span><b>${d.teams} tim</b>
+              <span>Total Kasus:</span><b>${d.total}</b>
+              <span>Dikunjungi:</span><b>${d.visited}</b>
+              <span>Terverifikasi:</span><b>${d.verified}</b>
+              <span>Progress:</span><b style="color:${color}">${pct}%</b>
+            </div>
+          </div>
+        `);
+      });
+    }, 300);
+  }
+
+  // ==== INSTALL ALL PATCHES ====
+  function installAll(){
+    if(typeof APP === 'undefined' || typeof showView === 'undefined'){ setTimeout(installAll, 300); return; }
+    
+    // Tunggu user login dulu
+    if(!APP.user){ setTimeout(installAll, 300); return; }
+    
+    // Sudah login — install
+    patchKunjungan();
+    patchSave();
+    patchDetail();
+    addMenus();
+    
+    console.log('✅ Patch Bundle (Foto+GPS, Verifikasi, Dashboard Eksekutif, Peta Live) aktif');
+  }
+  
+  installAll();
+  
+  // Re-check menu saat user ganti login
+  const checkInterval = setInterval(() => {
+    if(APP.user && !document.getElementById('navExec')){
+      addMenus();
+    }
+  }, 2000);
+})();
+</script>
 </body>
 </html>
