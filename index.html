@@ -1231,5 +1231,508 @@ window.addEventListener('load', async () => {
   await tryAutoLogin();
 });
 </script>
+  <script>
+/* ========== PATCH: EDIT ANGGOTA TIM TPK ========== */
+(function(){
+  function waitReady(){
+    if(typeof renderTPK === 'function' && typeof APP !== 'undefined' && typeof saveState === 'function'){
+      installPatch();
+    } else {
+      setTimeout(waitReady, 300);
+    }
+  }
+  
+  function installPatch(){
+    // ==== Override renderTPK — tambah tombol edit di tiap kartu ====
+    window.renderTPK = function(c){
+      const tpk = APP.state.tpk || [];
+      const isAdmin = APP.user?.role === 'admin';
+      c.innerHTML = `
+        <div class="stats-grid">
+          <div class="stat-card"><div class="icon" style="background:var(--primary-light);color:var(--primary)">👥</div><div class="label">Total Tim</div><div class="value">${(tpk.length||0).toLocaleString('id-ID')}</div></div>
+          <div class="stat-card"><div class="icon" style="background:var(--info-light);color:var(--info)">🧑‍⚕️</div><div class="label">Total Personel</div><div class="value">${((tpk.length||0)*3).toLocaleString('id-ID')}</div></div>
+          <div class="stat-card"><div class="icon" style="background:var(--warning-light);color:var(--warning)">🗺️</div><div class="label">Kecamatan</div><div class="value">${new Set(tpk.map(t=>t.kecamatan)).size}</div></div>
+          <div class="stat-card"><div class="icon" style="background:var(--success-light);color:var(--success)">🏘️</div><div class="label">Desa</div><div class="value">${new Set(tpk.map(t=>t.desa)).size}</div></div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div><div class="card-title">👥 Semua Tim TPK</div><div class="card-sub">Klik ✏️ untuk ganti anggota yang keluar/pindah</div></div>
+          </div>
+          <div class="filters">
+            <input type="text" id="tpkSearch" placeholder="🔍 Cari nama/desa..." oninput="filterTPKCards(this.value)">
+          </div>
+          ${tpk.length === 0 ? '<div class="empty"><div class="ic">👥</div><div>Belum ada data TPK</div></div>' : `
+          <div id="tpkGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:12px">
+            ${tpk.slice(0,100).map(t => teamCardHTML(t, isAdmin)).join('')}
+          </div>
+          ${tpk.length > 100 ? `<div style="text-align:center;padding:12px;color:var(--gray-500);font-size:12px">100 dari ${tpk.length} tim · gunakan pencarian</div>`:''}`}
+        </div>`;
+    };
+    
+    window.teamCardHTML = function(t, isAdmin){
+      const search = (t.bidan?.nama||'')+' '+(t.pkk?.nama||'')+' '+(t.kb?.nama||'')+' '+t.desa+' '+t.kecamatan;
+      return `
+        <div class="team-card" data-search="${(search||'').toLowerCase()}">
+          <div class="team-header">
+            <div class="team-title">Tim ${t.tim} · ${esc(t.desa)}</div>
+            <span class="badge badge-info">${esc(t.kecamatan)}</span>
+          </div>
+          <div class="member bidan"><div class="ic">🩺</div><div><div style="font-weight:600">${esc(t.bidan?.nama||'-')}</div><div style="font-size:10.5px;color:var(--gray-500)">Bidan</div></div></div>
+          <div class="member pkk"><div class="ic">👩</div><div><div style="font-weight:600">${esc(t.pkk?.nama||'-')}</div><div style="font-size:10.5px;color:var(--gray-500)">Kader PKK</div></div></div>
+          <div class="member kb"><div class="ic">👨‍👩‍👧</div><div><div style="font-weight:600">${esc(t.kb?.nama||'-')}</div><div style="font-size:10.5px;color:var(--gray-500)">Kader KB</div></div></div>
+          <button class="btn btn-sm btn-outline" style="width:100%;margin-top:10px;justify-content:center" onclick="openEditTPK('${t.teamId}')">✏️ Edit Anggota Tim</button>
+        </div>`;
+    };
+    
+    window.filterTPKCards = function(q){
+      q = (q||'').toLowerCase();
+      document.querySelectorAll('#tpkGrid .team-card').forEach(el => {
+        el.style.display = (el.dataset.search||'').includes(q) ? '' : 'none';
+      });
+    };
+    
+    // ==== Function buka edit TPK ====
+    window.openEditTPK = function(teamId){
+      const t = (APP.state.tpk||[]).find(x => x.teamId === teamId);
+      if(!t){ toast('Tim tidak ditemukan','error'); return; }
+      // Cek akses: admin bebas, kader hanya timnya sendiri
+      if(APP.user.role !== 'admin' && APP.user.teamId !== teamId){
+        toast('Anda hanya bisa edit tim Anda sendiri','error'); return;
+      }
+      APP.currentEditTPK = t;
+      
+      const form = `
+        <div style="background:#e0f2fe;padding:12px;border-radius:10px;margin-bottom:16px;font-size:12.5px;color:#0369a1;line-height:1.5">
+          <b>Tim ${t.tim} · ${esc(t.desa)}</b><br>
+          ${esc(t.kecamatan)} · Team ID: ${esc(t.teamId)}
+        </div>
+        <div class="form-group"><label style="color:var(--danger)">🩺 Nama Bidan</label>
+          <input type="text" id="t_bidan_nama" value="${esc(t.bidan?.nama||'')}" placeholder="Nama bidan"></div>
+        <div class="form-group"><label>📱 No HP Bidan</label>
+          <input type="text" id="t_bidan_hp" value="${esc(t.bidan?.hp||'')}" placeholder="08xxxxxxxxxx"></div>
+        <div class="form-group"><label style="color:#92400e">👩 Nama Kader PKK</label>
+          <input type="text" id="t_pkk_nama" value="${esc(t.pkk?.nama||'')}"></div>
+        <div class="form-group"><label>📱 No HP Kader PKK</label>
+          <input type="text" id="t_pkk_hp" value="${esc(t.pkk?.hp||'')}"></div>
+        <div class="form-group"><label style="color:var(--info)">👨‍👩‍👧 Nama Kader KB</label>
+          <input type="text" id="t_kb_nama" value="${esc(t.kb?.nama||'')}"></div>
+        <div class="form-group"><label>📱 No HP Kader KB</label>
+          <input type="text" id="t_kb_hp" value="${esc(t.kb?.hp||'')}"></div>
+        <div class="hint">
+          ⚠️ <b>Perhatian:</b> Username & password tim tetap sama (<b>tpkXXX</b>), hanya nama anggota yang berubah.
+        </div>`;
+      document.getElementById('confirmTitle').textContent = '✏️ Edit Anggota Tim';
+      document.getElementById('confirmBody').innerHTML = form;
+      const btn = document.getElementById('confirmBtn');
+      btn.textContent = '💾 Simpan';
+      btn.className = 'btn btn-primary-solid';
+      btn.onclick = saveEditTPKPatched;
+      document.getElementById('modalConfirm').classList.add('show');
+    };
+    
+    function saveEditTPKPatched(){
+      const t = APP.currentEditTPK;
+      if(!t) return;
+      const bidanNama = document.getElementById('t_bidan_nama').value.trim() || '-';
+      const bidanHp = document.getElementById('t_bidan_hp').value.trim() || '-';
+      const pkkNama = document.getElementById('t_pkk_nama').value.trim() || '-';
+      const pkkHp = document.getElementById('t_pkk_hp').value.trim() || '-';
+      const kbNama = document.getElementById('t_kb_nama').value.trim() || '-';
+      const kbHp = document.getElementById('t_kb_hp').value.trim() || '-';
+      
+      if(!bidanNama || !pkkNama || !kbNama){
+        toast('⚠️ Semua nama wajib diisi (isi "-" jika kosong)','error');
+        return;
+      }
+      
+      t.bidan = { nama: bidanNama, hp: bidanHp };
+      t.pkk = { nama: pkkNama, hp: pkkHp };
+      t.kb = { nama: kbNama, hp: kbHp };
+      
+      // Update session jika kader yang edit tim sendiri
+      if(APP.user.role === 'kader' && APP.user.teamId === t.teamId){
+        APP.user.teamInfo = t;
+        APP.user.nama = 'Tim ' + t.tim + ' · ' + t.desa;
+      }
+      
+      saveState();
+      closeModal('modalConfirm');
+      toast('✅ Data tim diperbarui','success');
+      
+      // Refresh view yang aktif
+      const active = document.querySelector('.nav-item.active')?.dataset.view || 'tpk';
+      showView(active, document.querySelector('.nav-item.active'));
+    }
+    
+    // ==== Update Profil — tambah tombol Edit Tim untuk kader ====
+    const origRenderProfil = window.renderProfil;
+    window.renderProfil = function(c){
+      origRenderProfil.call(this, c);
+      if(APP.user.role === 'kader' && APP.user.teamId){
+        const container = c.querySelector('.card');
+        if(container){
+          const btnWrap = document.createElement('div');
+          btnWrap.style.cssText = 'margin-top:16px;padding-top:16px;border-top:1px dashed #e5e7eb';
+          btnWrap.innerHTML = `<button class="btn btn-warning" style="width:100%;justify-content:center" onclick="openEditTPK('${APP.user.teamId}')">✏️ Edit Anggota Tim Saya</button>
+            <div style="font-size:11.5px;color:#6b7280;margin-top:8px;text-align:center">Jika ada anggota tim yang keluar atau pindah, klik tombol di atas untuk ganti nama & HP</div>`;
+          container.appendChild(btnWrap);
+        }
+      }
+    };
+    
+    console.log('✅ Patch Edit TPK aktif');
+  }
+  
+  waitReady();
+})();
+</script>
+  <script>
+/* ========== PATCH: MENU LAPORAN + EXPORT PDF/EXCEL/PRINT ========== */
+(function(){
+  function waitReady(){
+    if(typeof APP !== 'undefined' && typeof showView === 'function' && typeof saveState === 'function'){
+      installReport();
+    } else setTimeout(waitReady, 300);
+  }
+  
+  function installReport(){
+    // ==== Tambah menu "Laporan" di sidebar ====
+    function addMenu(){
+      const nav = document.querySelector('.nav');
+      if(!nav || document.getElementById('navLaporan')) return;
+      const btn = document.createElement('button');
+      btn.className = 'nav-item';
+      btn.id = 'navLaporan';
+      btn.dataset.view = 'laporan';
+      btn.innerHTML = '<span class="ic">📄</span> Laporan';
+      const kunjungan = nav.querySelector('[data-view="kunjungan"]');
+      if(kunjungan && kunjungan.nextSibling){
+        kunjungan.parentNode.insertBefore(btn, kunjungan.nextSibling);
+      } else nav.appendChild(btn);
+      btn.onclick = () => {
+        document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById('sidebar').classList.remove('open');
+        document.getElementById('pageTitle').textContent = 'Laporan';
+        document.getElementById('pageCrumb').textContent = 'Preview & Ekspor';
+        renderLaporan(document.getElementById('content'));
+      };
+    }
+    addMenu();
+    
+    // ==== Render halaman laporan ====
+    window.renderLaporan = function(c){
+      const isAdmin = APP.user.role === 'admin';
+      const allCases = isAdmin ? (APP.state.cases||[]) : (APP.state.cases||[]).filter(x => x.team_id === APP.user.teamId);
+      const total = allCases.length;
+      const byGizi = {Stunting:0,'Gizi Kurang':0,'Gizi Buruk':0,Ideal:0};
+      const byPend = {'Belum Dikunjungi':0,'Sudah Dikunjungi':0,'Dalam Pendampingan':0,Graduated:0};
+      allCases.forEach(x => {
+        if(byGizi[x.status_gizi] !== undefined) byGizi[x.status_gizi]++;
+        if(byPend[x.status_pendampingan] !== undefined) byPend[x.status_pendampingan]++;
+      });
+      const perKec = {};
+      allCases.forEach(x => {
+        const k = x.kecamatan || '-';
+        if(!perKec[k]) perKec[k] = {total:0, stunting:0};
+        perKec[k].total++;
+        if(x.status_gizi === 'Stunting') perKec[k].stunting++;
+      });
+      const kecSorted = Object.entries(perKec).sort((a,b) => b[1].total - a[1].total);
+      const maxKec = kecSorted[0]?.[1].total || 1;
+      
+      // Donut chart
+      const pSt = total ? Math.round(byGizi.Stunting/total*100) : 0;
+      const pGK = total ? Math.round(byGizi['Gizi Kurang']/total*100) : 0;
+      const pGB = total ? Math.round(byGizi['Gizi Buruk']/total*100) : 0;
+      const donutBg = total 
+        ? `conic-gradient(#dc2626 0% ${pSt}%, #f59e0b ${pSt}% ${pSt+pGK}%, #b91c1c ${pSt+pGK}% ${pSt+pGK+pGB}%, #16a34a ${pSt+pGK+pGB}% 100%)` 
+        : '#e5e7eb';
+      
+      const hariIni = new Date().toLocaleDateString('id-ID',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+      
+      c.innerHTML = `
+        <div class="no-print card" style="margin-bottom:16px">
+          <div class="card-header">
+            <div><div class="card-title">📄 Ekspor Laporan</div><div class="card-sub">Pilih format untuk presentasi atau laporan</div></div>
+          </div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <button class="btn btn-danger" onclick="printReport()">🖨 Print / Simpan PDF</button>
+            <button class="btn btn-success" style="background:#16a34a;color:#fff" onclick="exportExcelReport()">📊 Excel (.xlsx)</button>
+            <button class="btn btn-info" onclick="exportCSVReport()">📋 CSV</button>
+            <button class="btn btn-primary-solid" onclick="window.print()">👁 Preview Cetak</button>
+          </div>
+          <div class="hint" style="margin-top:12px">
+            💡 <b>Untuk PDF:</b> Klik <b>Print</b> → di dialog pilih <b>"Save as PDF"</b> sebagai printer<br>
+            💡 <b>Untuk Excel:</b> File .xlsx langsung terunduh, siap dibuka di Excel/Google Sheets<br>
+            💡 <b>Untuk presentasi:</b> Buka file Excel di PowerPoint/Canva, atau gunakan preview cetak
+          </div>
+        </div>
+        
+        <div class="card" id="reportContent" style="background:#fff">
+          <div class="report-header" style="text-align:center;padding:20px 0;border-bottom:2px solid #0284c7;margin-bottom:20px">
+            <div style="display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:8px">
+              <img src="logo.png" alt="Z" style="width:70px;height:70px;object-fit:contain" onerror="this.style.display='none'">
+              <div style="text-align:left">
+                <div style="font-size:22px;font-weight:800;color:#0f172a;letter-spacing:1px">Z-STUNTING</div>
+                <div style="font-size:12px;color:#0284c7;font-weight:600">DP2KBP3A Kabupaten Jeneponto</div>
+              </div>
+            </div>
+            <div style="font-size:16px;font-weight:700;color:#0f172a;margin-top:12px">LAPORAN PENDAMPINGAN KELUARGA STUNTING</div>
+            <div style="font-size:12px;color:#6b7280;margin-top:4px">Periode: ${hariIni}</div>
+            ${isAdmin ? '' : `<div style="font-size:12px;color:#6b7280;margin-top:2px">Tim: ${esc(APP.user.nama)}</div>`}
+          </div>
+          
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px">
+            <div style="background:#fef2f2;padding:14px;border-radius:10px;text-align:center">
+              <div style="font-size:11px;color:#6b7280;font-weight:600">TOTAL KASUS</div>
+              <div style="font-size:28px;font-weight:800;color:#dc2626;margin-top:4px">${total.toLocaleString('id-ID')}</div>
+            </div>
+            <div style="background:#fef3c7;padding:14px;border-radius:10px;text-align:center">
+              <div style="font-size:11px;color:#6b7280;font-weight:600">STUNTING</div>
+              <div style="font-size:28px;font-weight:800;color:#b45309;margin-top:4px">${byGizi.Stunting.toLocaleString('id-ID')}</div>
+            </div>
+            <div style="background:#e0f2fe;padding:14px;border-radius:10px;text-align:center">
+              <div style="font-size:11px;color:#6b7280;font-weight:600">DIDAMPINGI</div>
+              <div style="font-size:28px;font-weight:800;color:#0284c7;margin-top:4px">${(total - byPend['Belum Dikunjungi']).toLocaleString('id-ID')}</div>
+            </div>
+            <div style="background:#dcfce7;padding:14px;border-radius:10px;text-align:center">
+              <div style="font-size:11px;color:#6b7280;font-weight:600">GRADUATED</div>
+              <div style="font-size:28px;font-weight:800;color:#16a34a;margin-top:4px">${byPend.Graduated.toLocaleString('id-ID')}</div>
+            </div>
+          </div>
+          
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px" class="report-charts">
+            <div style="background:#f9fafb;padding:16px;border-radius:12px">
+              <div style="font-weight:700;font-size:14px;margin-bottom:14px">🍩 Distribusi Status Gizi</div>
+              <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap">
+                <div style="width:130px;height:130px;border-radius:50%;background:${donutBg};position:relative;flex-shrink:0">
+                  <div style="position:absolute;inset:22%;background:#f9fafb;border-radius:50%"></div>
+                  <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;z-index:2">
+                    <div style="font-size:22px;font-weight:800">${total.toLocaleString('id-ID')}</div>
+                    <div style="font-size:10px;color:#6b7280">Total</div>
+                  </div>
+                </div>
+                <div style="flex:1;min-width:140px;font-size:12.5px;display:flex;flex-direction:column;gap:8px">
+                  <div style="display:flex;align-items:center;gap:8px"><span style="width:12px;height:12px;background:#dc2626;border-radius:3px"></span> Stunting <b style="margin-left:auto">${byGizi.Stunting}</b> <span style="color:#6b7280">(${pSt}%)</span></div>
+                  <div style="display:flex;align-items:center;gap:8px"><span style="width:12px;height:12px;background:#f59e0b;border-radius:3px"></span> Gizi Kurang <b style="margin-left:auto">${byGizi['Gizi Kurang']}</b> <span style="color:#6b7280">(${pGK}%)</span></div>
+                  <div style="display:flex;align-items:center;gap:8px"><span style="width:12px;height:12px;background:#b91c1c;border-radius:3px"></span> Gizi Buruk <b style="margin-left:auto">${byGizi['Gizi Buruk']}</b> <span style="color:#6b7280">(${pGB}%)</span></div>
+                  <div style="display:flex;align-items:center;gap:8px"><span style="width:12px;height:12px;background:#16a34a;border-radius:3px"></span> Ideal <b style="margin-left:auto">${byGizi.Ideal}</b></div>
+                </div>
+              </div>
+            </div>
+            
+            <div style="background:#f9fafb;padding:16px;border-radius:12px">
+              <div style="font-weight:700;font-size:14px;margin-bottom:14px">📊 Progress Pendampingan</div>
+              ${Object.entries(byPend).map(([k,v]) => {
+                const pct = total ? Math.round(v/total*100) : 0;
+                const clr = k==='Graduated' ? '#16a34a' : (k==='Belum Dikunjungi' ? '#dc2626' : (k==='Dalam Pendampingan' ? '#f59e0b' : '#0891b2'));
+                return `<div style="margin-bottom:12px">
+                  <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">
+                    <span>${k}</span><b>${v} <span style="color:#6b7280">(${pct}%)</span></b>
+                  </div>
+                  <div style="height:8px;background:#e5e7eb;border-radius:5px;overflow:hidden">
+                    <div style="height:100%;background:${clr};width:${pct}%;border-radius:5px"></div>
+                  </div>
+                </div>`;
+              }).join('')}
+            </div>
+          </div>
+          
+          <div style="margin-bottom:24px">
+            <div style="font-weight:700;font-size:14px;margin-bottom:14px">🗺️ Sebaran Kasus per Kecamatan</div>
+            <div style="display:grid;gap:8px">
+              ${kecSorted.map(([kec, d]) => {
+                const w = Math.round(d.total/maxKec*100);
+                return `<div style="display:grid;grid-template-columns:130px 1fr 100px;gap:12px;align-items:center;font-size:12px">
+                  <div><b>${esc(kec)}</b></div>
+                  <div style="height:20px;background:#e5e7eb;border-radius:5px;overflow:hidden;position:relative">
+                    <div style="height:100%;background:linear-gradient(90deg,#0284c7,#0891b2);width:${w}%"></div>
+                    <div style="position:absolute;inset:0;display:flex;align-items:center;padding:0 8px;font-size:11px;font-weight:600;color:#0f172a">${d.total} kasus</div>
+                  </div>
+                  <div style="text-align:right;color:#dc2626;font-weight:600">${d.stunting} stunting</div>
+                </div>`;
+              }).join('')}
+            </div>
+          </div>
+          
+          <div style="margin-bottom:20px">
+            <div style="font-weight:700;font-size:14px;margin-bottom:10px">📋 Detail Kasus</div>
+            <table style="width:100%;border-collapse:collapse;font-size:11.5px">
+              <thead style="background:#0284c7;color:#fff">
+                <tr>
+                  <th style="padding:8px;text-align:left;border:1px solid #cbd5e1">No</th>
+                  <th style="padding:8px;text-align:left;border:1px solid #cbd5e1">Nama</th>
+                  <th style="padding:8px;text-align:left;border:1px solid #cbd5e1">JK</th>
+                  <th style="padding:8px;text-align:left;border:1px solid #cbd5e1">Usia</th>
+                  <th style="padding:8px;text-align:left;border:1px solid #cbd5e1">Desa</th>
+                  <th style="padding:8px;text-align:left;border:1px solid #cbd5e1">Kecamatan</th>
+                  <th style="padding:8px;text-align:left;border:1px solid #cbd5e1">Status Gizi</th>
+                  <th style="padding:8px;text-align:left;border:1px solid #cbd5e1">Pendampingan</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${allCases.slice(0,500).map((x,i) => `
+                  <tr style="background:${i%2?'#f9fafb':'#fff'}">
+                    <td style="padding:6px 8px;border:1px solid #e5e7eb">${i+1}</td>
+                    <td style="padding:6px 8px;border:1px solid #e5e7eb"><b>${esc(x.nama||'-')}</b></td>
+                    <td style="padding:6px 8px;border:1px solid #e5e7eb">${x.jk||'-'}</td>
+                    <td style="padding:6px 8px;border:1px solid #e5e7eb">${x.usia_bulan||0} bln</td>
+                    <td style="padding:6px 8px;border:1px solid #e5e7eb">${esc(x.desa||'-')}</td>
+                    <td style="padding:6px 8px;border:1px solid #e5e7eb">${esc(x.kecamatan||'-')}</td>
+                    <td style="padding:6px 8px;border:1px solid #e5e7eb">${x.status_gizi||'-'}</td>
+                    <td style="padding:6px 8px;border:1px solid #e5e7eb">${x.status_pendampingan||'-'}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+            ${allCases.length > 500 ? `<div style="text-align:center;padding:10px;font-size:11.5px;color:#6b7280">Menampilkan 500 dari ${allCases.length} kasus · Untuk data lengkap, ekspor Excel/CSV</div>`:''}
+          </div>
+          
+          <div style="margin-top:30px;padding-top:20px;border-top:1px solid #e5e7eb;text-align:center">
+            <div style="font-size:11.5px;color:#6b7280;font-style:italic">"Satu Data, Satu Aksi Menuju Jeneponto Bahagia"</div>
+            <div style="font-size:11px;color:#9ca3af;margin-top:6px">Dicetak: ${new Date().toLocaleString('id-ID')}</div>
+          </div>
+        </div>
+        
+        <style>
+          @media print {
+            .no-print, .sidebar, .topbar, .menu-toggle { display: none !important; }
+            .main-content { margin-left: 0 !important; }
+            .content { padding: 0 !important; }
+            body { background: #fff !important; }
+            .card { box-shadow: none !important; border: none !important; padding: 0 !important; }
+            .report-header { page-break-after: avoid; }
+            table { page-break-inside: auto; }
+            tr { page-break-inside: avoid; page-break-after: auto; }
+            thead { display: table-header-group; }
+          }
+          @media (max-width:900px){
+            .report-charts { grid-template-columns: 1fr !important; }
+          }
+        </style>`;
+    };
+    
+    // ==== Excel export ====
+    window.exportExcelReport = function(){
+      if(typeof XLSX === 'undefined'){ toast('Library Excel belum siap','error'); return; }
+      const allCases = APP.user.role === 'admin' 
+        ? (APP.state.cases||[]) 
+        : (APP.state.cases||[]).filter(x => x.team_id === APP.user.teamId);
+      
+      // Sheet 1: Ringkasan
+      const byGizi = {Stunting:0,'Gizi Kurang':0,'Gizi Buruk':0,Ideal:0};
+      allCases.forEach(x => { if(byGizi[x.status_gizi] !== undefined) byGizi[x.status_gizi]++; });
+      const ringkasan = [
+        ['LAPORAN Z-STUNTING'],
+        ['DP2KBP3A Kabupaten Jeneponto'],
+        [],
+        ['Tanggal Laporan', new Date().toLocaleDateString('id-ID')],
+        ['Total Kasus', allCases.length],
+        [],
+        ['Status Gizi', 'Jumlah'],
+        ['Stunting', byGizi.Stunting],
+        ['Gizi Kurang', byGizi['Gizi Kurang']],
+        ['Gizi Buruk', byGizi['Gizi Buruk']],
+        ['Ideal', byGizi.Ideal]
+      ];
+      const ws1 = XLSX.utils.aoa_to_sheet(ringkasan);
+      ws1['!cols'] = [{wch:25},{wch:30}];
+      
+      // Sheet 2: Detail Kasus
+      const detail = allCases.map((x,i) => ({
+        'No': i+1,
+        'NIK': x.nik||'',
+        'No KK': x.no_kk||'',
+        'Nama Balita': x.nama||'',
+        'JK': x.jk||'',
+        'Tgl Lahir': x.tgl_lahir||'',
+        'Usia (bln)': x.usia_bulan||0,
+        'Nama Ibu': x.nama_ibu||'',
+        'Nama Ayah': x.nama_ayah||'',
+        'Alamat': x.alamat||'',
+        'Desa': x.desa||'',
+        'Kecamatan': x.kecamatan||'',
+        'Posyandu': x.posyandu||'',
+        'HP Ortu': x.hp_ortu||'',
+        'BB (kg)': x.bb||'',
+        'TB (cm)': x.tb||'',
+        'Status Gizi': x.status_gizi||'',
+        'Pendampingan': x.status_pendampingan||'',
+        'Sumber Data': x.sumber_data||'BNBA'
+      }));
+      const ws2 = XLSX.utils.json_to_sheet(detail);
+      ws2['!cols'] = [
+        {wch:5},{wch:18},{wch:18},{wch:22},{wch:5},{wch:12},{wch:10},
+        {wch:20},{wch:20},{wch:30},{wch:18},{wch:14},{wch:18},{wch:14},
+        {wch:10},{wch:10},{wch:14},{wch:18},{wch:12}
+      ];
+      
+      // Sheet 3: Per Kecamatan
+      const perKec = {};
+      allCases.forEach(x => {
+        const k = x.kecamatan || '-';
+        if(!perKec[k]) perKec[k] = {total:0, stunting:0, gizi_kurang:0, gizi_buruk:0, ideal:0, damping:0};
+        perKec[k].total++;
+        if(x.status_gizi === 'Stunting') perKec[k].stunting++;
+        if(x.status_gizi === 'Gizi Kurang') perKec[k].gizi_kurang++;
+        if(x.status_gizi === 'Gizi Buruk') perKec[k].gizi_buruk++;
+        if(x.status_gizi === 'Ideal') perKec[k].ideal++;
+        if(x.status_pendampingan !== 'Belum Dikunjungi') perKec[k].damping++;
+      });
+      const rekKec = Object.entries(perKec).sort((a,b) => b[1].total - a[1].total).map(([kec, d]) => ({
+        'Kecamatan': kec,
+        'Total Kasus': d.total,
+        'Stunting': d.stunting,
+        'Gizi Kurang': d.gizi_kurang,
+        'Gizi Buruk': d.gizi_buruk,
+        'Ideal': d.ideal,
+        'Sudah Didampingi': d.damping
+      }));
+      const ws3 = XLSX.utils.json_to_sheet(rekKec);
+      ws3['!cols'] = [{wch:18},{wch:12},{wch:10},{wch:12},{wch:12},{wch:8},{wch:18}];
+      
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws1, 'Ringkasan');
+      XLSX.utils.book_append_sheet(wb, ws2, 'Detail Kasus');
+      XLSX.utils.book_append_sheet(wb, ws3, 'Per Kecamatan');
+      
+      const fname = 'Laporan_ZStunting_' + new Date().toISOString().slice(0,10) + '.xlsx';
+      XLSX.writeFile(wb, fname);
+      toast('✅ Excel diunduh: ' + fname, 'success');
+    };
+    
+    // ==== CSV export ====
+    window.exportCSVReport = function(){
+      const allCases = APP.user.role === 'admin' 
+        ? (APP.state.cases||[]) 
+        : (APP.state.cases||[]).filter(x => x.team_id === APP.user.teamId);
+      const headers = ['No','NIK','No KK','Nama','JK','Tgl Lahir','Usia (bln)','Nama Ibu','Nama Ayah','Alamat','Desa','Kecamatan','Posyandu','HP Ortu','BB','TB','Status Gizi','Pendampingan'];
+      const rows = allCases.map((x,i) => [
+        i+1, x.nik||'', x.no_kk||'', x.nama||'', x.jk||'', x.tgl_lahir||'', x.usia_bulan||0,
+        x.nama_ibu||'', x.nama_ayah||'', x.alamat||'', x.desa||'', x.kecamatan||'',
+        x.posyandu||'', x.hp_ortu||'', x.bb||'', x.tb||'', x.status_gizi||'', x.status_pendampingan||''
+      ]);
+      const csv = [headers, ...rows].map(r => r.map(v => `"${String(v||'').replace(/"/g,'""')}"`).join(',')).join('\n');
+      const blob = new Blob(['\ufeff' + csv], {type:'text/csv;charset=utf-8'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Laporan_ZStunting_${new Date().toISOString().slice(0,10)}.csv`;
+      a.click(); URL.revokeObjectURL(url);
+      toast('✅ CSV diunduh','success');
+    };
+    
+    // ==== Print ====
+    window.printReport = function(){
+      window.print();
+    };
+    
+    console.log('✅ Patch Laporan aktif');
+  }
+  
+  waitReady();
+})();
+</script>
 </body>
 </html>
