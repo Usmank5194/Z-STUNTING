@@ -4498,5 +4498,184 @@ tbody tr:hover {
   waitReady();
 })();
 </script>
+  <script>
+/* ========== PATCH: AUTO-ASSIGN PINTAR + FILTER FIX ========== */
+(function(){
+  function waitReady(){
+    if(typeof APP !== 'undefined' && typeof saveState === 'function' && typeof visibleCases === 'function'){
+      install();
+    } else setTimeout(waitReady, 300);
+  }
+  
+  function install(){
+    if(window._reassignPatched) return;
+    window._reassignPatched = true;
+    
+    /* ===== 1. FUNCTION REASSIGN PINTAR ===== */
+    window.reassignAll = function(silent){
+      const tpk = APP.state.tpk || [];
+      const cases = APP.state.cases || [];
+      if(!tpk.length){ if(!silent) toast('Belum ada TPK','error'); return; }
+      if(!cases.length){ if(!silent) toast('Belum ada kasus','warning'); return; }
+      
+      // Build 3 index: kec+desa, desa, kec
+      const groups = {};
+      const desaIndex = {};
+      const kecIndex = {};
+      
+      tpk.forEach(t => {
+        const kecN = String(t.kecamatan||'').toUpperCase().trim();
+        const desaN = String(t.desa||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+        const key = kecN + '||' + desaN;
+        if(!groups[key]) groups[key] = [];
+        groups[key].push(t);
+        if(!desaIndex[desaN]) desaIndex[desaN] = [];
+        desaIndex[desaN].push(t);
+        if(!kecIndex[kecN]) kecIndex[kecN] = [];
+        kecIndex[kecN].push(t);
+      });
+      
+      const counters = {};
+      tpk.forEach(t => counters[t.teamId] = 0);
+      
+      let assigned = 0, unassigned = 0;
+      const unassignList = [];
+      
+      cases.forEach(c => {
+        const kecN = String(c.kecamatan||'').toUpperCase().trim();
+        const desaN = String(c.desa||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+        
+        let pool = null;
+        let matchType = '';
+        
+        // P1: Exact kec + desa
+        if(kecN && desaN){ pool = groups[kecN + '||' + desaN]; if(pool) matchType = 'kec+desa'; }
+        // P2: Desa saja
+        if((!pool || !pool.length) && desaN){ pool = desaIndex[desaN]; if(pool) matchType = 'desa'; }
+        // P3: Kecamatan saja
+        if((!pool || !pool.length) && kecN){ pool = kecIndex[kecN]; if(pool) matchType = 'kec'; }
+        
+        if(!pool || !pool.length){
+          c.team_id = null;
+          unassigned++;
+          unassignList.push(c.nama + ' (' + (c.desa||'?') + ', ' + (c.kecamatan||'?') + ')');
+          return;
+        }
+        
+        // Round robin
+        pool.sort((a,b) => counters[a.teamId] - counters[b.teamId]);
+        c.team_id = pool[0].teamId;
+        // Auto-fill kecamatan/desa dari TPK
+        if(!c.kecamatan && pool[0].kecamatan) c.kecamatan = pool[0].kecamatan.toUpperCase();
+        if(!c.desa && pool[0].desa) c.desa = pool[0].desa;
+        counters[pool[0].teamId]++;
+        assigned++;
+      });
+      
+      saveState();
+      updateBadge();
+      
+      if(!silent){
+        let msg = '✅ ' + assigned + ' kasus di-assign ke TPK';
+        if(unassigned > 0) msg += ' · ⚠️ ' + unassigned + ' tanpa info wilayah';
+        toast(msg, 'success');
+        console.log('✅ Reassign:', assigned, 'assigned,', unassigned, 'unassigned');
+        if(unassignList.length) console.log('Contoh tidak keassign:', unassignList.slice(0, 10));
+      }
+      
+      return { assigned, unassigned };
+    };
+    
+    /* ===== 2. AUTO-REASSIGN SETELAH IMPORT ===== */
+    const origImport = window.importBNBA;
+    if(origImport){
+      window.importBNBA = async function(){
+        await origImport.call(this);
+        // Auto-reassign setelah import
+        setTimeout(() => {
+          if(APP.state.cases && APP.state.cases.length){
+            const res = window.reassignAll(true);
+            const total = APP.state.cases.length;
+            const assignedCount = APP.state.cases.filter(c => c.team_id).length;
+            
+            let msg = '📊 ' + assignedCount + '/' + total + ' kasus ke TPK';
+            if(res && res.unassigned > 0) msg += ' · ' + res.unassigned + ' tanpa wilayah';
+            toast(msg, assignedCount > 0 ? 'success' : 'warning');
+            
+            const active = document.querySelector('.nav-item.active')?.dataset.view;
+            if(active) showView(active, document.querySelector('.nav-item.active'));
+          }
+        }, 800);
+      };
+    }
+    
+    /* ===== 3. FILTER CASE-INSENSITIVE ===== */
+    const origVisible = window.visibleCases;
+    if(origVisible){
+      // Override getFilteredCases
+      window.getFilteredCases = function(){
+        let arr = visibleCases();
+        const f = APP.filters;
+        if(f.search){
+          const s = f.search.toLowerCase();
+          arr = arr.filter(x => 
+            (x.nama||'').toLowerCase().includes(s) || 
+            (x.nik||'').includes(s) || 
+            (x.desa||'').toLowerCase().includes(s)
+          );
+        }
+        if(f.kecamatan) arr = arr.filter(x => String(x.kecamatan||'').toUpperCase() === String(f.kecamatan).toUpperCase());
+        if(f.status_gizi) arr = arr.filter(x => x.status_gizi === f.status_gizi);
+        if(f.status_pendampingan) arr = arr.filter(x => x.status_pendampingan === f.status_pendampingan);
+        return arr;
+      };
+    }
+    
+    /* ===== 4. TOMBOL DI PENGATURAN ===== */
+    const origPengaturan = window.renderPengaturan;
+    if(origPengaturan){
+      window.renderPengaturan = function(c){
+        origPengaturan.call(this, c);
+        setTimeout(() => {
+          const cards = c.querySelectorAll('.card');
+          cards.forEach(card => {
+            const txt = card.textContent || '';
+            if(txt.includes('Backup') && txt.includes('Reset') && !card.querySelector('.btn-reassign')){
+              const flexWrap = card.querySelector('div[style*="flex"]');
+              if(flexWrap){
+                const btn = document.createElement('button');
+                btn.className = 'btn-reassign';
+                btn.style.cssText = 'background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;padding:10px 18px;border-radius:10px;border:none;font-weight:700;cursor:pointer;font-size:13px';
+                btn.innerHTML = '🔄 Assign Ulang Kasus ke TPK';
+                btn.onclick = () => {
+                  if(confirm('Assign ulang SEMUA kasus ke TPK berdasarkan wilayah?\n\nGunakan untuk fix kasus yang tidak muncul di TPK.')){
+                    window.reassignAll();
+                  }
+                };
+                flexWrap.appendChild(btn);
+              }
+            }
+          });
+        }, 150);
+      };
+    }
+    
+    /* ===== 5. AUTO-RUN SEKALI SAAT LOAD ===== */
+    setTimeout(() => {
+      if(APP.user && APP.user.role === 'admin' && (APP.state.cases||[]).length > 0){
+        const unassigned = (APP.state.cases||[]).filter(c => !c.team_id).length;
+        if(unassigned > 0){
+          console.log('⚠️ Ada', unassigned, 'kasus tanpa tim — auto-reassign...');
+          window.reassignAll(true);
+        }
+      }
+    }, 3000);
+    
+    console.log('✅ Patch Auto-Assign + Filter Fix aktif');
+  }
+  
+  waitReady();
+})();
+</script>
 </body>
 </html>
