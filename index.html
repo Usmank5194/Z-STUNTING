@@ -3224,5 +3224,155 @@ div[style*="background: #f3f4f6"] {
   waitReady();
 })();
 </script>
+  <script>
+/* ========== PATCH: LIHAT SEMUA 309 TIM RANKING ========== */
+(function(){
+  function waitReady(){
+    if(typeof APP !== 'undefined' && typeof renderDashboard === 'function'){
+      install();
+    } else setTimeout(waitReady, 300);
+  }
+  
+  function install(){
+    if(window._allRankingPatched) return;
+    window._allRankingPatched = true;
+    
+    // Override renderDashboard untuk tambah tombol "Lihat Semua"
+    const orig = window.renderDashboard;
+    window.renderDashboard = function(c){
+      orig.call(this, c);
+      setTimeout(() => {
+        // Cari card Top 10
+        const cards = c.querySelectorAll('.card');
+        cards.forEach(card => {
+          if(card.textContent.includes('Top 10 TPK Paling Aktif')){
+            const header = card.querySelector('.card-header');
+            if(header && !header.querySelector('.btn-lihat-semua')){
+              const btn = document.createElement('button');
+              btn.className = 'btn btn-sm btn-info btn-lihat-semua';
+              btn.innerHTML = '👁 Lihat Semua 309 Tim';
+              btn.style.cssText = 'background:linear-gradient(135deg,#4dd0e1,#26c6da);color:#fff;padding:8px 14px;border-radius:10px;border:none;font-weight:700;font-size:12px;cursor:pointer;box-shadow:0 3px 10px rgba(77,208,225,.3)';
+              btn.onclick = showAllRanking;
+              // Sisipkan sebelum tombol Bagikan
+              const shareBtn = header.querySelector('.btn-wa');
+              if(shareBtn) shareBtn.parentNode.insertBefore(btn, shareBtn);
+              else header.appendChild(btn);
+            }
+          }
+        });
+      }, 200);
+    };
+    
+    // Modal semua ranking
+    window.showAllRanking = function(){
+      const cases = APP.state.cases || [];
+      const tpk = APP.state.tpk || [];
+      
+      // Hitung skor semua tim
+      const perTim = {};
+      tpk.forEach(t => perTim[t.teamId] = {t, total:0, visited:0, verified:0, foto:0, gps:0, kunjungan:0});
+      cases.forEach(x => {
+        if(!x.team_id || !perTim[x.team_id]) return;
+        perTim[x.team_id].total++;
+        if(x.riwayat && x.riwayat.length > 0) perTim[x.team_id].visited++;
+        if(x.status_verifikasi === 'Terverifikasi') perTim[x.team_id].verified++;
+        (x.riwayat||[]).forEach(r => {
+          perTim[x.team_id].kunjungan++;
+          if(r.foto && r.foto.length) perTim[x.team_id].foto++;
+          if(r.gps) perTim[x.team_id].gps++;
+        });
+      });
+      
+      const all = Object.values(perTim).map(t => {
+        const pctVisited = t.total ? (t.visited / t.total) * 100 : 0;
+        const pctVerified = t.visited ? (t.verified / t.visited) * 100 : 0;
+        const pctFoto = t.visited ? (t.foto / t.visited) * 100 : 0;
+        const pctGps = t.kunjungan ? (t.gps / t.kunjungan) * 100 : 0;
+        const skor = Math.round(pctVisited * 0.4 + pctVerified * 0.3 + pctFoto * 0.2 + pctGps * 0.1);
+        return {...t, skor};
+      }).sort((a,b) => b.skor - a.skor || b.kunjungan - a.kunjungan || a.t.tim - b.t.tim);
+      
+      const rowsHTML = all.map((t, i) => {
+        const rank = i + 1;
+        const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `#${rank}`;
+        const isTop10 = rank <= 10;
+        const bg = isTop10 ? 'linear-gradient(135deg,rgba(255,213,79,.15),rgba(255,183,77,.1))' : 'transparent';
+        const color = rank === 1 ? '#ffd54f' : rank === 2 ? '#b0bec5' : rank === 3 ? '#ffb74d' : 'var(--soft-text-muted)';
+        return `<tr style="background:${bg};font-weight:${isTop10?'700':'500'}">
+          <td style="font-size:14px;font-weight:800;color:${color};text-align:center">${medal}</td>
+          <td>
+            <div style="font-weight:700">${esc(t.t.bidan?.nama||'-')}</div>
+            <div style="font-size:10.5px;color:var(--soft-text-dim)">Tim ${t.t.tim} · ${esc(t.t.desa)}</div>
+          </td>
+          <td style="font-size:11px">${esc(t.t.kecamatan)}</td>
+          <td style="text-align:center;font-weight:800;color:${color};font-size:16px">${t.skor}</td>
+          <td style="text-align:center;font-size:11.5px">${t.visited}/${t.total}</td>
+          <td style="text-align:center;font-size:11.5px">${t.verified}</td>
+          <td style="text-align:center;font-size:11.5px">${t.foto}</td>
+          <td style="text-align:center;font-size:11.5px">${t.gps}</td>
+        </tr>`;
+      }).join('');
+      
+      document.getElementById('confirmTitle').textContent = '🏆 Ranking Lengkap ' + all.length + ' Tim TPK';
+      document.getElementById('confirmBody').innerHTML = `
+        <div style="background:linear-gradient(135deg,#e0f7fa,#b2ebf2);padding:14px;border-radius:12px;margin-bottom:16px;font-size:12.5px;color:#00695c">
+          💡 <b>Total ${all.length} tim</b> diperingkat berdasarkan skor aktivitas.<br>
+          <b>Top 10</b> ditampilkan dengan highlight kuning.
+        </div>
+        <div style="overflow-y:auto;max-height:60vh;border-radius:12px;box-shadow:inset 0 0 0 1px rgba(174,191,212,.2)">
+          <table style="width:100%;border-collapse:collapse;font-size:12.5px">
+            <thead style="position:sticky;top:0;background:#f0f5fb;z-index:1">
+              <tr>
+                <th style="padding:10px 6px;text-align:center;width:50px">Rank</th>
+                <th style="padding:10px 6px;text-align:left">Bidan</th>
+                <th style="padding:10px 6px;text-align:left">Kecamatan</th>
+                <th style="padding:10px 6px;text-align:center">Skor</th>
+                <th style="padding:10px 6px;text-align:center">🏠</th>
+                <th style="padding:10px 6px;text-align:center">✅</th>
+                <th style="padding:10px 6px;text-align:center">📸</th>
+                <th style="padding:10px 6px;text-align:center">📍</th>
+              </tr>
+            </thead>
+            <tbody>${rowsHTML}</tbody>
+          </table>
+        </div>
+        <div style="margin-top:12px;padding:10px;background:#fff9e6;border-radius:10px;font-size:11.5px;color:#92400e;line-height:1.6">
+          <b>Skor = Kunjungan 40% + Verifikasi 30% + Foto 20% + GPS 10%</b><br>
+          🏠 Kunjungan · ✅ Verifikasi · 📸 Foto · 📍 GPS
+        </div>`;
+      
+      const btn = document.getElementById('confirmBtn');
+      btn.textContent = '📤 Bagikan Semua ke WA';
+      btn.className = 'btn btn-wa';
+      btn.onclick = () => { closeModal('modalConfirm'); shareAllRanking(all); };
+      
+      // Perbesar modal
+      const modal = document.querySelector('#modalConfirm .modal');
+      if(modal) modal.style.maxWidth = '760px';
+      
+      document.getElementById('modalConfirm').classList.add('show');
+    };
+    
+    // Share semua ranking
+    window.shareAllRanking = function(all){
+      const now = new Date().toLocaleDateString('id-ID',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+      const top10 = all.slice(0, 10);
+      const lines = top10.map((t, i) => {
+        const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i+1}`;
+        return `${medal} *${t.t.bidan?.nama || t.t.desa}*\n   Tim ${t.t.tim} · ${t.t.desa}, ${t.t.kecamatan}\n   Skor: *${t.skor}* · 🏠 ${t.visited}/${t.total} · ✅ ${t.verified} · 📸 ${t.foto}`;
+      }).join('\n\n');
+      const msg = `🏆 *TOP 10 TPK PALING AKTIF*\n📅 ${now}\n\n━━━━━━━━━━━━━━━━━━━━\n\n${lines}\n\n━━━━━━━━━━━━━━━━━━━━\n\n📊 *Total dinilai:* ${all.length} tim dari 927 personel TPK\n\n💡 Skor = Kunjungan 40% + Verifikasi 30% + Foto 20% + GPS 10%\n\n🎯 _Bersinergi Mendampingi Keluarga,_\n_Wujudkan Jeneponto Zero Stunting!_`;
+      copyToClipboard(msg).then(() => {
+        toast('📋 Pesan dicopy — tempel di grup WA','success');
+        setTimeout(() => window.open(WA_GRUP_TPK,'_blank'), 500);
+      }).catch(() => toast('⚠️ Gagal copy','warning'));
+    };
+    
+    console.log('✅ Patch Lihat Semua 309 Tim aktif');
+  }
+  
+  waitReady();
+})();
+</script>
 </body>
 </html>
