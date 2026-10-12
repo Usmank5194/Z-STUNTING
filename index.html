@@ -4894,5 +4894,248 @@ tbody tr:hover {
   waitReady();
 })();
 </script>
+  <script>
+/* ========== PATCH FINAL: WA GRUP TPK + LINK UPDATE ========== */
+(function(){
+  const WA_GRUP_TPK = 'https://chat.whatsapp.com/KkMsk5wzgt1B5jrGRfgNnd';
+  const WEBSITE_URL = 'https://usmank5194.github.io/Z-STUNTING/';
+  
+  function waitReady(){
+    if(typeof APP !== 'undefined' && typeof showView === 'function'){
+      install();
+    } else setTimeout(waitReady, 300);
+  }
+  
+  function install(){
+    if(window._finalPatchInstalled) return;
+    window._finalPatchInstalled = true;
+    
+    /* ==== 1. Build pesan statistik ==== */
+    function buildMessage(){
+      const cases = APP.state.cases || [];
+      const total = cases.length;
+      const visited = cases.filter(x => x.riwayat && x.riwayat.length > 0).length;
+      const verified = cases.filter(x => x.status_verifikasi === 'Terverifikasi').length;
+      const stunting = cases.filter(x => x.status_gizi === 'Stunting').length;
+      const giziKurang = cases.filter(x => x.status_gizi === 'Gizi Kurang').length;
+      const giziBuruk = cases.filter(x => x.status_gizi === 'Gizi Buruk').length;
+      const needVerify = cases.filter(x => x.perlu_verifikasi_desa).length;
+      const belum = total - visited;
+      const pct = total ? Math.round(visited/total*100) : 0;
+      
+      const perKec = {};
+      cases.forEach(x => {
+        const k = (x.kecamatan || '-').toUpperCase();
+        if(!perKec[k]) perKec[k] = {total: 0, visited: 0};
+        perKec[k].total++;
+        if(x.riwayat && x.riwayat.length > 0) perKec[k].visited++;
+      });
+      const topKec = Object.entries(perKec)
+        .sort((a,b) => b[1].total - a[1].total)
+        .slice(0, 5)
+        .map(([kec, d]) => `• ${kec}: ${d.visited}/${d.total} (${d.total?Math.round(d.visited/d.total*100):0}%)`)
+        .join('\n');
+      
+      const now = new Date();
+      const tgl = now.toLocaleDateString('id-ID', {weekday:'long',day:'numeric',month:'long',year:'numeric'});
+      const jam = now.toLocaleTimeString('id-ID', {hour:'2-digit',minute:'2-digit'});
+      
+      return `📢 *LAPORAN Z-STUNTING JENEPONTO*\n` +
+        `📅 ${tgl}\n` +
+        `🕐 ${jam} WITA\n\n` +
+        `━━━━━━━━━━━━━━━━━━━━\n\n` +
+        `📊 *STATISTIK HARI INI:*\n` +
+        `👶 Total Kasus: *${total}*\n` +
+        `🏠 Sudah Dikunjungi: *${visited}* (${pct}%)\n` +
+        `⏳ Belum Dikunjungi: *${belum}*\n` +
+        `✅ Terverifikasi: *${verified}*\n\n` +
+        `🩸 *STATUS GIZI:*\n` +
+        `🔴 Stunting: *${stunting}*\n` +
+        `🟡 Gizi Kurang: *${giziKurang}*\n` +
+        `🔴 Gizi Buruk: *${giziBuruk}*\n` +
+        (needVerify > 0 ? `\n🔍 *Perlu Cek Desa: ${needVerify}*\n` : '') +
+        `\n━━━━━━━━━━━━━━━━━━━━\n\n` +
+        `📈 *PROGRESS PER KECAMATAN:*\n` +
+        `${topKec || '• Belum ada data'}\n\n` +
+        `━━━━━━━━━━━━━━━━━━━━\n\n` +
+        `🔗 *Login Kader:*\n${WEBSITE_URL}\n\n` +
+        `🎯 _Bersinergi Mendampingi Keluarga,_\n` +
+        `_Wujudkan Jeneponto Zero Stunting!_\n\n` +
+        `_"Satu Data, Satu Aksi Menuju Jeneponto Bahagia"_`;
+    }
+    
+    /* ==== 2. Copy ke clipboard ==== */
+    function copyToClipboard(text){
+      return new Promise((resolve, reject) => {
+        if(navigator.clipboard && navigator.clipboard.writeText){
+          navigator.clipboard.writeText(text).then(resolve).catch(() => {
+            // Fallback
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            ta.style.position = 'fixed';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.select();
+            try { document.execCommand('copy'); resolve(); }
+            catch(e) { reject(e); }
+            document.body.removeChild(ta);
+          });
+        } else {
+          const ta = document.createElement('textarea');
+          ta.value = text;
+          ta.style.position = 'fixed';
+          ta.style.opacity = '0';
+          document.body.appendChild(ta);
+          ta.select();
+          try { document.execCommand('copy'); resolve(); }
+          catch(e) { reject(e); }
+          document.body.removeChild(ta);
+        }
+      });
+    }
+    
+    /* ==== 3. Function kirim ke grup WA ==== */
+    window.kirimKeGrupWA = async function(){
+      const pesan = buildMessage();
+      try {
+        await copyToClipboard(pesan);
+        toast('📋 Pesan dicopy — tempel di grup WA', 'success');
+      } catch(e){
+        toast('⚠️ Gagal copy, buka grup & ketik manual', 'warning');
+      }
+      setTimeout(() => {
+        window.open(WA_GRUP_TPK, '_blank');
+      }, 500);
+    };
+    
+    /* ==== 4. Function share biasa ==== */
+    window.bagikanWA = function(){
+      const pesan = buildMessage();
+      if(navigator.share){
+        navigator.share({ title: 'Laporan Z-STUNTING', text: pesan })
+          .then(() => toast('✅ Dibagikan', 'success'))
+          .catch(err => { if(err.name !== 'AbortError') copyToClipboard(pesan).then(() => toast('📋 Pesan dicopy', 'success')); });
+      } else {
+        copyToClipboard(pesan).then(() => toast('📋 Pesan dicopy', 'success'));
+      }
+    };
+    
+    /* ==== 5. Preview pesan ==== */
+    window.previewPesanWA = function(){
+      const pesan = buildMessage();
+      document.getElementById('confirmTitle').textContent = '📱 Preview Notifikasi WA';
+      document.getElementById('confirmBody').innerHTML = `
+        <div style="background:#dcfce7;padding:12px;border-radius:10px;margin-bottom:14px;font-size:12.5px;color:#166534;line-height:1.5">
+          💬 Pesan ini akan dicopy & siap dikirim ke grup TPK.
+        </div>
+        <pre style="background:#0f172a;color:#a7f3d0;padding:16px;border-radius:10px;font-size:11.5px;white-space:pre-wrap;line-height:1.5;max-height:400px;overflow-y:auto;font-family:monospace;margin:0">${pesan.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</pre>
+      `;
+      const btn = document.getElementById('confirmBtn');
+      btn.textContent = '💬 Buka Grup & Kirim';
+      btn.className = 'btn';
+      btn.style.cssText = 'background:linear-gradient(135deg,#25D366,#128C7E);color:#fff;padding:12px 20px;border-radius:10px;border:none;font-weight:700;cursor:pointer';
+      btn.onclick = () => { closeModal('modalConfirm'); kirimKeGrupWA(); };
+      document.getElementById('modalConfirm').classList.add('show');
+    };
+    
+    /* ==== 6. Tambah tombol di Dashboard Eksekutif ==== */
+    const origExec = window.renderExec;
+    if(origExec){
+      window.renderExec = function(c){
+        origExec.call(this, c);
+        setTimeout(() => {
+          const execCard = c.querySelector('.exec-card');
+          if(!execCard || execCard.querySelector('.wa-btns')) return;
+          const wrap = document.createElement('div');
+          wrap.className = 'wa-btns';
+          wrap.style.cssText = 'margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end';
+          wrap.innerHTML = `
+            <button onclick="kirimKeGrupWA()" style="background:linear-gradient(135deg,#25D366,#128C7E);color:#fff;padding:12px 20px;border-radius:10px;border:none;font-weight:700;cursor:pointer;font-size:13.5px;display:flex;align-items:center;gap:8px;box-shadow:0 4px 12px rgba(37,211,102,.3)">
+              📤 Kirim ke Grup TPK
+            </button>
+            <button onclick="previewPesanWA()" style="background:rgba(255,255,255,.15);color:#fff;padding:12px 20px;border-radius:10px;border:1px solid rgba(255,255,255,.3);font-weight:700;cursor:pointer;font-size:13.5px;display:flex;align-items:center;gap:8px">
+              👁 Preview
+            </button>
+          `;
+          execCard.appendChild(wrap);
+        }, 250);
+      };
+    }
+    
+    /* ==== 7. Tambah menu di sidebar ==== */
+    setTimeout(() => {
+      const nav = document.querySelector('.nav');
+      if(nav && !document.getElementById('navKirimWA')){
+        const btn = document.createElement('button');
+        btn.className = 'nav-item';
+        btn.id = 'navKirimWA';
+        btn.innerHTML = '<span class="ic">📢</span> Kirim ke Grup WA';
+        const ref = nav.querySelector('[data-view="progress"]');
+        if(ref && ref.parentNode) ref.parentNode.insertBefore(btn, ref.nextSibling);
+        else nav.appendChild(btn);
+        
+        btn.onclick = () => {
+          document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          document.getElementById('sidebar').classList.remove('open');
+          document.getElementById('pageTitle').textContent = 'Kirim ke Grup WA';
+          document.getElementById('pageCrumb').textContent = 'Notifikasi grup TPK';
+          renderHalamanWA(document.getElementById('content'));
+        };
+      }
+    }, 500);
+    
+    window.renderHalamanWA = function(c){
+      const pesan = buildMessage();
+      c.innerHTML = `
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">📢 Kirim Laporan ke Grup TPK</div>
+              <div class="card-sub">Grup: TPK Kabupaten Jeneponto</div>
+            </div>
+          </div>
+          
+          <div style="background:#dcfce7;padding:14px;border-radius:10px;margin-bottom:16px;font-size:12.5px;color:#166534;line-height:1.6">
+            ✅ <b>Grup terhubung:</b> TPK Kabupaten Jeneponto<br>
+            💡 Pesan akan otomatis dicopy → grup WA akan terbuka → tinggal paste & kirim
+          </div>
+          
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px">
+            <button onclick="kirimKeGrupWA()" style="background:linear-gradient(135deg,#25D366,#128C7E);color:#fff;padding:14px 24px;border-radius:10px;border:none;font-weight:700;cursor:pointer;font-size:15px;display:flex;align-items:center;gap:8px;box-shadow:0 4px 12px rgba(37,211,102,.3)">
+              📤 Kirim ke Grup Sekarang
+            </button>
+            <button onclick="bagikanWA()" style="background:#0284c7;color:#fff;padding:14px 24px;border-radius:10px;border:none;font-weight:700;cursor:pointer;font-size:15px;display:flex;align-items:center;gap:8px">
+              📱 Share ke Aplikasi Lain
+            </button>
+          </div>
+          
+          <div style="border:1px solid #e2e8f0;border-radius:10px;padding:16px;background:#f8fafc">
+            <div style="font-size:12px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">📄 Preview Pesan</div>
+            <pre style="background:#0f172a;color:#a7f3d0;padding:16px;border-radius:10px;font-size:11.5px;white-space:pre-wrap;line-height:1.5;font-family:monospace;margin:0;max-height:500px;overflow-y:auto">${pesan.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</pre>
+          </div>
+          
+          <div style="margin-top:16px;background:#fef3c7;padding:12px;border-radius:8px;font-size:12px;color:#92400e;line-height:1.6">
+            💡 <b>Catatan:</b> WhatsApp tidak mengizinkan kirim otomatis ke grup tanpa user klik (aturan anti-spam). Sistem sudah otomatis copy pesan, Anda tinggal <b>paste & kirim</b> di grup.
+          </div>
+        </div>
+      `;
+    };
+    
+    /* ==== 8. Update link website di semua pesan (kalau ada patch WA lama) ==== */
+    const fixLinkWebsite = () => {
+      document.querySelectorAll('a[href*="SISTUNTING"]').forEach(a => {
+        if(a.href.includes('/SISTUNTING/')) a.href = a.href.replace('/SISTUNTING/', '/Z-STUNTING/');
+      });
+    };
+    fixLinkWebsite();
+    setInterval(fixLinkWebsite, 2000);
+    
+    console.log('✅ Patch WA Grup TPK aktif');
+  }
+  
+  waitReady();
+})();
+</script>
 </body>
 </html>
