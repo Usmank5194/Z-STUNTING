@@ -3849,5 +3849,57 @@ tbody tr:hover {
   waitReady();
 })();
 </script>
+  <script>
+/* ========== PATCH: FILE INPUT TERIMA SEMUA FORMAT ========== */
+(function(){
+  function fixFileInput(){
+    // Cari semua input file dengan id csvBNBA atau excelTPK
+    const inputs = document.querySelectorAll('input[type="file"]');
+    let fixed = 0;
+    
+    inputs.forEach(inp => {
+      // Kalau input punya id csvBNBA (BNBA) atau excelTPK (TPK), ubah accept
+      if(inp.id === 'csvBNBA'){
+        inp.setAttribute('accept', '.pdf,.docx,.xlsx,.xls,.csv,.txt,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv,text/plain');
+        fixed++;
+      }
+      if(inp.id === 'excelTPK'){
+        inp.setAttribute('accept', '.xlsx,.xls,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        fixed++;
+      }
+    });
+    
+    if(fixed > 0){
+      console.log('✅ File input diperbaiki:', fixed);
+    }
+  }
+  
+  // Jalankan saat halaman siap
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', () => {
+      fixFileInput();
+      // Ulangi tiap 1 detik untuk handle input yang di-generate dinamis
+      setInterval(fixFileInput, 1000);
+    });
+  } else {
+    fixFileInput();
+    setInterval(fixFileInput, 1000);
+  }
+  
+  // Override renderPengaturan agar setelah render, langsung fix input
+  const waitOverride = setInterval(() => {
+    if(typeof renderPengaturan === 'function'){
+      const orig = window.renderPengaturan;
+      window.renderPengaturan = function(c){
+        orig.call(this, c);
+        setTimeout(fixFileInput, 50);
+        setTimeout(fixFileInput, 300);
+      };
+      clearInterval(waitOverride);
+      console.log('✅ Override renderPengaturan aktif');
+    }
+  }, 500);
+})();
+</script>
 </body>
 </html>
