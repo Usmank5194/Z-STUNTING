@@ -3374,5 +3374,169 @@ div[style*="background: #f3f4f6"] {
   waitReady();
 })();
 </script>
+  <script>
+/* ========== PATCH: PERINTAHKAN TPK KUNJUNGI SASARAN ========== */
+(function(){
+  function waitReady(){
+    if(typeof APP !== 'undefined' && typeof openDetail === 'function'){
+      install();
+    } else setTimeout(waitReady, 300);
+  }
+  
+  function install(){
+    if(window._perintahTPKPatched) return;
+    window._perintahTPKPatched = true;
+    
+    // Override openDetail untuk tambah tombol perintah
+    const origOpenDetail = window.openDetail;
+    window.openDetail = function(id){
+      origOpenDetail.call(this, id);
+      setTimeout(() => {
+        const x = APP.currentDetail;
+        if(!x) return;
+        if(APP.user.role !== 'admin') return; // Hanya admin
+        
+        const footer = document.getElementById('detailFooter');
+        if(!footer || footer.querySelector('.btn-perintah')) return;
+        
+        const btn = document.createElement('button');
+        btn.className = 'btn btn-perintah';
+        btn.innerHTML = '📤 Perintahkan TPK';
+        btn.style.cssText = 'background:linear-gradient(135deg,#a78bfa,#8b5cf6);color:#fff;padding:10px 18px;border-radius:12px;border:none;font-weight:700;font-size:13px;cursor:pointer;box-shadow:0 4px 12px rgba(139,92,246,.35)';
+        btn.onclick = () => perintahTPK(x.id);
+        
+        // Sisipkan sebelum tombol terakhir
+        const lastBtn = footer.lastElementChild;
+        footer.insertBefore(btn, lastBtn);
+      }, 200);
+    };
+    
+    // Function untuk perintah TPK
+    window.perintahTPK = function(id){
+      const x = (APP.state.cases||[]).find(c => c.id === id);
+      if(!x){ toast('Kasus tidak ditemukan','error'); return; }
+      
+      const team = x.team_id ? findTeam(x.team_id) : null;
+      if(!team){ 
+        toast('Kasus belum di-assign ke TPK. Assign dulu.','warning'); 
+        return; 
+      }
+      
+      // Build pesan perintah
+      const now = new Date().toLocaleDateString('id-ID',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+      const usia = x.usia_bulan ? `${x.usia_bulan} bulan` : '-';
+      const gizi = x.status_gizi || 'Perlu Dicek';
+      
+      const msg = `📢 *PERINTAH KUNJUNGAN*
+━━━━━━━━━━━━━━━━━━━━
+
+Assalamualaikum Ibu *${team.bidan?.nama || '-'}*,
+
+Kepada Tim TPK *Tim ${team.tim} · ${team.desa}* untuk segera melakukan *kunjungan rumah* ke sasaran berikut:
+
+👶 *${x.nama}*
+🎂 Usia: ${usia}
+⚥ JK: ${x.jk === 'L' ? 'Laki-laki' : 'Perempuan'}
+🩸 Gizi: *${gizi}*
+📍 Desa: ${x.desa || team.desa}
+🏘️ Kec: ${x.kecamatan || team.kecamatan}
+📱 HP Ortu: ${x.hp_ortu || '-'}
+🏠 Alamat: ${x.alamat || '-'}
+
+━━━━━━━━━━━━━━━━━━━━
+
+📋 *Tugas Anda:*
+1. Cek keberadaan sasaran
+2. Ukur BB/TB/LK/LILA
+3. Foto dokumentasi
+4. Rekam GPS lokasi
+5. Input di aplikasi Z-STUNTING
+
+🔗 Login: ${WEBSITE_URL}
+
+━━━━━━━━━━━━━━━━━━━━
+
+📅 Dikirim: ${now}
+✍️ Oleh: ${APP.user.nama}
+
+🎯 _Bersinergi Mendampingi Keluarga,_
+_Wujudkan Jeneponto Zero Stunting!_`;
+
+      // Preview modal
+      document.getElementById('confirmTitle').textContent = '📤 Perintahkan TPK Kunjungi';
+      document.getElementById('confirmBody').innerHTML = `
+        <div style="background:#e0f2fe;padding:12px;border-radius:10px;margin-bottom:14px;font-size:12.5px;color:#0369a1">
+          <b>Tim TPK Penerima:</b><br>
+          🩺 Bidan: <b>${esc(team.bidan?.nama || '-')}</b><br>
+          👩 Kader PKK: ${esc(team.pkk?.nama || '-')}<br>
+          👨‍👩‍👧 Kader KB: ${esc(team.kb?.nama || '-')}<br>
+          📱 HP Bidan: <b>${esc(team.bidan?.hp || '-')}</b>
+        </div>
+        <div style="background:#f8fafc;padding:12px;border-radius:10px;margin-bottom:14px;font-size:12.5px">
+          <b>Sasaran:</b><br>
+          👶 ${esc(x.nama)} (${x.usia_bulan||0} bulan)<br>
+          📍 ${esc(x.desa||'-')}, ${esc(x.kecamatan||'-')}<br>
+          🩸 Status: <b>${esc(x.status_gizi||'-')}</b>
+        </div>
+        <div style="font-size:11.5px;color:var(--soft-text-dim);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">📄 Preview Pesan WA</div>
+        <pre style="background:#0f172a;color:#a7f3d0;padding:14px;border-radius:10px;font-size:11px;white-space:pre-wrap;line-height:1.5;max-height:300px;overflow-y:auto;font-family:monospace;margin:0">${esc(msg)}</pre>`;
+      
+      const btn = document.getElementById('confirmBtn');
+      btn.textContent = '📤 Copy & Buka WA';
+      btn.className = 'btn';
+      btn.style.cssText = 'background:linear-gradient(135deg,#a78bfa,#8b5cf6);color:#fff;padding:12px 22px;border-radius:12px;border:none;font-weight:700;cursor:pointer';
+      btn.onclick = () => {
+        closeModal('modalConfirm');
+        kirimPerintah(msg, x, team);
+      };
+      
+      document.getElementById('modalConfirm').classList.add('show');
+    };
+    
+    // Kirim perintah via WA
+    window.kirimPerintah = function(msg, x, team){
+      // Simpan riwayat perintah ke kasus
+      if(!x.riwayat) x.riwayat = [];
+      x.riwayat.push({
+        id: 'CMD' + Date.now(),
+        tanggal: new Date().toISOString().slice(0,10),
+        jenis: '📤 Perintah Kunjungan',
+        kader: APP.user.username,
+        catatan: `Diperintahkan oleh ${APP.user.nama} kepada Tim ${team.tim} · ${team.desa}`
+      });
+      saveState();
+      
+      // Copy pesan ke clipboard
+      copyToClipboard(msg).then(() => {
+        toast('📋 Pesan dicopy — kirim ke WA bidan','success');
+        
+        // Buka WA ke bidan (kalau ada HP)
+        const hp = String(team.bidan?.hp || '').replace(/[^\d]/g, '');
+        if(hp && hp.length >= 10){
+          const nomor = hp.replace(/^0/, '62');
+          setTimeout(() => {
+            if(confirm(`Buka WhatsApp ke Bidan ${team.bidan.nama}?\n\nNomor: ${team.bidan.hp}`)){
+              window.open(`https://wa.me/${nomor}?text=${encodeURIComponent(msg)}`, '_blank');
+            }
+          }, 300);
+        } else {
+          // Tidak ada HP bidan → tawarkan buka grup
+          setTimeout(() => {
+            if(confirm('HP Bidan belum diisi.\n\nKirim ke Grup TPK saja?')){
+              window.open(WA_GRUP_TPK, '_blank');
+            }
+          }, 300);
+        }
+      }).catch(() => {
+        toast('⚠️ Gagal copy, buka WA manual','warning');
+      });
+    };
+    
+    console.log('✅ Patch Perintahkan TPK aktif');
+  }
+  
+  waitReady();
+})();
+</script>
 </body>
 </html>
