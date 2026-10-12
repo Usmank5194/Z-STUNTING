@@ -3901,5 +3901,508 @@ tbody tr:hover {
   }, 500);
 })();
 </script>
+  <!-- Library Parser -->
+<script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+  if(typeof pdfjsLib !== 'undefined'){
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  }
+</script>
+
+<script>
+/* ========== PATCH: IMPORT FLEKSIBEL (SEMUA DATA DITERIMA) ========== */
+(function(){
+  function waitReady(){
+    if(typeof APP !== 'undefined' && typeof autoAssign === 'function'){ install(); }
+    else setTimeout(waitReady, 300);
+  }
+  
+  function install(){
+    const fixInputs = () => {
+      const inp = document.getElementById('csvBNBA');
+      if(inp) inp.setAttribute('accept', '.pdf,.docx,.xlsx,.xls,.csv,.txt,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv,text/plain');
+    };
+    fixInputs();
+    setInterval(fixInputs, 1500);
+    
+    window.importBNBA = async function(){
+      const f = document.getElementById('csvBNBA')?.files[0];
+      if(!f){ toast('Pilih file dulu','warning'); return; }
+      
+      showLoading('Membaca file...');
+      
+      try {
+        let cases = [];
+        const ext = f.name.split('.').pop().toLowerCase();
+        
+        console.log('📁 File:', f.name, '| Tipe:', ext);
+        
+        if(ext === 'pdf') cases = await parsePDF(f);
+        else if(ext === 'docx') cases = await parseDOCX(f);
+        else if(ext === 'xlsx' || ext === 'xls') cases = await parseXLSX(f);
+        else if(ext === 'csv' || ext === 'txt') cases = await parseCSVFile(f);
+        else { hideLoading(); toast('Format tidak didukung: .' + ext,'error'); return; }
+        
+        hideLoading();
+        
+        if(cases.length === 0){
+          alert('❌ TIDAK ADA DATA VALID\n\nKemungkinan:\n1. File tidak berisi tabel yang bisa dibaca\n2. Nama kolom berbeda dari yang didukung\n3. PDF hasil scan (gambar, bukan teks)');
+          return;
+        }
+        
+        // Auto-detect wilayah dari nama file
+        const fname = f.name.toUpperCase();
+        let defaultDesa = '', defaultKec = '';
+        for(const k of ['ARUNGKEKE','BANGKALA BARAT','BANGKALA','BATANG','BINAMU','BONTORAMBA','KELARA','RUMBIA','TAMALATEA','TAROWANG','TURATEA']){
+          if(fname.includes(k)){ defaultKec = k; break; }
+        }
+        const desaMatch = fname.match(/(?:KEL\.|KELURAHAN|DESA)\s+([A-Z\s]+?)(?:\s+KEC|\s+BULAN|\s+TAHUN|\.|$)/);
+        if(desaMatch) defaultDesa = desaMatch[1].trim();
+        
+        cases.forEach(c => {
+          if(!c.kecamatan && defaultKec) c.kecamatan = defaultKec;
+          if(!c.desa && defaultDesa) c.desa = defaultDesa;
+        });
+        
+        // Summary
+        const sum = {Stunting:0, 'Gizi Kurang':0, 'Gizi Buruk':0, Ideal:0};
+        const incomplete = cases.filter(c => c.status_verifikasi === 'Perlu Dilengkapi').length;
+        cases.forEach(c => { if(sum[c.status_gizi] !== undefined) sum[c.status_gizi]++; });
+        
+        const preview = cases.slice(0, 5).map((c, i) => 
+          `${i+1}. ${c.nama.substring(0,30)} — ${c.status_gizi}${c.status_verifikasi === 'Perlu Dilengkapi' ? ' ⚠️' : ''}`
+        ).join('\n');
+        
+        const msg = `📊 SUMMARY IMPORT\n` +
+          `━━━━━━━━━━━━━━━━━━━━━━\n` +
+          `File: ${f.name}\n` +
+          `Total: ${cases.length} kasus\n\n` +
+          `Distribusi Gizi:\n` +
+          `🔴 Stunting: ${sum.Stunting}\n` +
+          `🟡 Gizi Kurang: ${sum['Gizi Kurang']}\n` +
+          `🔴 Gizi Buruk: ${sum['Gizi Buruk']}\n` +
+          `🟢 Ideal: ${sum.Ideal}\n\n` +
+          `⚠️ Perlu Dilengkapi TPK: ${incomplete}\n` +
+          `(BB/TB kosong, akan diisi saat kunjungan)\n\n` +
+          `Preview 5 pertama:\n${preview}\n\n` +
+          `Kec: ${defaultKec || '-'} · Desa: ${defaultDesa || '-'}\n\n` +
+          `Lanjut import? Data lama akan DIGANTI.`;
+        
+        if(!confirm(msg)) return;
+        
+        APP.state.cases = cases;
+        autoAssign();
+        saveState();
+        toast(`✅ ${cases.length} kasus · ${sum.Stunting} stunting · ${incomplete} perlu dilengkapi`,'success');
+        updateBadge();
+        showView('kasus', document.querySelector('.nav-item[data-view="kasus"]'));
+        
+      } catch(e){
+        hideLoading();
+        console.error('❌ Error:', e);
+        alert('❌ GAGAL IMPORT\n\nPesan: ' + e.message);
+      }
+    };
+    
+    /* ============ PARSE STATUS GIZI FLEKSIBEL ============ */
+    function detectGizi(row, idx){
+      // Prioritas: kolom STUNTING (Ya/Tidak) → BB/U + TB/U → BB/TB hitung
+      const getVal = (i) => i >= 0 && row[i] !== undefined ? String(row[i]).trim() : '';
+      
+      const stuntingVal = getVal(idx.stunting).toLowerCase();
+      const bbuVal = getVal(idx.bbu).toLowerCase();
+      const tbuVal = getVal(idx.tbu).toLowerCase();
+      const ketVal = getVal(idx.ket).toLowerCase();
+      
+      // 1. Cek kolom STUNTING (Ya/Tidak)
+      if(stuntingVal){
+        if(/^(ya|yes|y|1|true|stunting|st|s)$/i.test(stuntingVal.replace(/\s/g,''))) return 'Stunting';
+        if(/^(tidak|no|n|0|false)$/i.test(stuntingVal.replace(/\s/g,''))) {
+          // TIDAK stunting, cek BB/U untuk klasifikasi
+          if(bbuVal.includes('kurang')) return 'Gizi Kurang';
+          if(bbuVal.includes('buruk')) return 'Gizi Buruk';
+          return 'Ideal';
+        }
+      }
+      
+      // 2. Cek BB/U
+      if(bbuVal){
+        if(bbuVal.includes('buruk') || bbuVal.includes('sangat_kurang') || bbuVal.includes('sangat kurang')) return 'Gizi Buruk';
+        if(bbuVal.includes('kurang')) return 'Gizi Kurang';
+      }
+      
+      // 3. Cek TB/U
+      if(tbuVal){
+        if(tbuVal.includes('sangat_pendek') || tbuVal.includes('sangat pendek')) return 'Stunting';
+        if(tbuVal.includes('pendek')) return 'Stunting';
+      }
+      
+      // 4. Gabungan
+      if(bbuVal && tbuVal){
+        if(bbuVal.includes('normal') && tbuVal.includes('normal')) return 'Ideal';
+      }
+      
+      // 5. Default: kosong → nanti dihitung dari BB/TB
+      return '';
+    }
+    
+    /* ============ PARSER PDF ============ */
+    async function parsePDF(file){
+      if(typeof pdfjsLib === 'undefined') throw new Error('PDF.js belum dimuat');
+      const buf = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({data: buf}).promise;
+      const allRows = [];
+      
+      for(let p = 1; p <= pdf.numPages; p++){
+        const page = await pdf.getPage(p);
+        const tc = await page.getTextContent();
+        const items = tc.items.map(it => ({text: it.str, x: it.transform[4], y: it.transform[5], w: it.width}));
+        
+        const byY = {};
+        items.forEach(it => {
+          const k = Math.round(it.y/3)*3;
+          if(!byY[k]) byY[k] = [];
+          byY[k].push(it);
+        });
+        const ys = Object.keys(byY).map(Number).sort((a,b) => b-a);
+        for(const y of ys){
+          const rowItems = byY[y].sort((a,b) => a.x - b.x);
+          const cells = []; let cur = null;
+          for(const it of rowItems){
+            if(cur && (it.x - (cur.x + cur.w)) < 15){ cur.text += ' ' + it.text; cur.w = it.x + it.w - cur.x; }
+            else { if(cur) cells.push(cur.text.trim()); cur = {...it}; }
+          }
+          if(cur) cells.push(cur.text.trim());
+          if(cells.filter(c => c).length >= 2) allRows.push(cells);
+        }
+      }
+      return parseRowsArray(allRows);
+    }
+    
+    /* ============ PARSER DOCX ============ */
+    async function parseDOCX(file){
+      if(typeof mammoth === 'undefined') throw new Error('Mammoth.js belum dimuat');
+      const buf = await file.arrayBuffer();
+      const result = await mammoth.convertToHtml({arrayBuffer: buf});
+      const doc = new DOMParser().parseFromString(result.value, 'text/html');
+      const allRows = [];
+      doc.querySelectorAll('table').forEach(table => {
+        table.querySelectorAll('tr').forEach(row => {
+          const cells = Array.from(row.querySelectorAll('td,th')).map(c => c.textContent.trim());
+          if(cells.filter(c => c).length >= 2) allRows.push(cells);
+        });
+      });
+      return parseRowsArray(allRows);
+    }
+    
+    /* ============ PARSER XLSX ============ */
+    async function parseXLSX(file){
+      const buf = await file.arrayBuffer();
+      const wb = XLSX.read(buf, {type:'array'});
+      console.log('📊 Sheets:', wb.SheetNames);
+      
+      let best = {name: wb.SheetNames[0], rows: [], score: -1};
+      for(const name of wb.SheetNames){
+        const t = XLSX.utils.sheet_to_json(wb.Sheets[name], {header:1, defval:'', raw:false});
+        let score = 0;
+        const flat = t.flat().map(h => String(h||'').toLowerCase());
+        if(flat.some(h => h.includes('nama'))) score += 10;
+        if(flat.some(h => h.includes('nik'))) score += 8;
+        if(flat.some(h => h.includes('lahir') || h.includes('tgl'))) score += 5;
+        if(flat.some(h => h.includes('berat') || h.includes('bb'))) score += 3;
+        if(flat.some(h => h.includes('tinggi') || h.includes('tb'))) score += 3;
+        if(flat.some(h => h.includes('stunting'))) score += 8;
+        if(t.length > 2) score += Math.min(t.length, 30);
+        
+        console.log(`  Sheet "${name}": ${t.length} baris, skor ${score}`);
+        if(score > best.score){ best = {name, rows: t, score}; }
+      }
+      
+      console.log('📌 Terpilih:', best.name, '(', best.rows.length, 'baris )');
+      return parseRowsArray(best.rows.map(r => (r||[]).map(c => String(c||'').trim())));
+    }
+    
+    /* ============ PARSER CSV ============ */
+    async function parseCSVFile(file){
+      const text = await file.text();
+      const lines = text.split(/\r?\n/).filter(l => l.trim());
+      const delim = ((lines[0]||'').match(/;/g)||[]).length > ((lines[0]||'').match(/,/g)||[]).length ? ';' : ',';
+      const rows = lines.map(line => {
+        const vals = []; let cur = ''; let inQ = false;
+        for(let i=0; i<line.length; i++){
+          const ch = line[i];
+          if(ch === '"'){ if(inQ && line[i+1]==='"'){ cur+='"'; i++; } else inQ = !inQ; }
+          else if(ch === delim && !inQ){ vals.push(cur); cur = ''; }
+          else cur += ch;
+        }
+        vals.push(cur);
+        return vals.map(v => v.trim());
+      });
+      return parseRowsArray(rows);
+    }
+    
+    /* ============ PARSE ROWS UNIVERSAL ============ */
+    function parseRowsArray(rows){
+      if(!rows || rows.length < 2) return [];
+      
+      // Cari header
+      let hIdx = -1, maxScore = -1;
+      for(let i = 0; i < Math.min(15, rows.length); i++){
+        const r = rows[i] || [];
+        const filled = r.filter(v => String(v||'').trim()).length;
+        const joined = r.join(' ').toLowerCase();
+        let score = filled;
+        if(joined.includes('nama')) score += 15;
+        if(joined.includes('nik')) score += 10;
+        if(joined.includes('lahir') || joined.includes('tgl')) score += 5;
+        if(joined.includes('berat') || joined.includes('bb')) score += 3;
+        if(joined.includes('tinggi') || joined.includes('tb')) score += 3;
+        if(joined.includes('stunting')) score += 10;
+        if(score > maxScore){ maxScore = score; hIdx = i; }
+      }
+      if(hIdx === -1) hIdx = 0;
+      console.log('📌 Header di baris:', hIdx + 1);
+      
+      // Norm header
+      const norm = (h) => String(h||'').toLowerCase().trim()
+        .replace(/[\/\.\-]/g, '_')
+        .replace(/\s+/g, '_')
+        .replace(/[^a-z0-9_]/g, '')
+        .replace(/_+/g, '_')
+        .replace(/^_|_$/g, '');
+      
+      const hdr1 = (rows[hIdx] || []).map(norm);
+      const hdr2 = hIdx + 1 < rows.length ? (rows[hIdx + 1] || []).map(norm) : [];
+      
+      console.log('📋 Header 1:', hdr1);
+      console.log('📋 Header 2:', hdr2);
+      
+      const findIdx = (arr, names) => {
+        for(const n of names){
+          const i = arr.findIndex(h => h && (h === n || h.includes(n)));
+          if(i >= 0) return i;
+        }
+        return -1;
+      };
+      
+      const isHdr2 = hdr2.some(h => h === 'bapak' || h === 'ibu' || h === 'ayah');
+      
+      const idx = {
+        nama: findIdx(hdr1, ['nama_balita','nama_anak','nama']),
+        nik: findIdx(hdr1, ['nik','no_nik']),
+        tgl: findIdx(hdr1, ['tgl_lahir','tanggal_lahir','tgl_lhr','lahir','tgl']),
+        jk: findIdx(hdr1, ['jenis_kelamin','jenis_kel','jk','gender']),
+        ayah: findIdx(hdr1, ['nama_ayah','ayah','bapak']) >= 0 ? findIdx(hdr1, ['nama_ayah','ayah','bapak']) : findIdx(hdr2, ['ayah','bapak']),
+        ibu: findIdx(hdr1, ['nama_ibu','ibu']) >= 0 ? findIdx(hdr1, ['nama_ibu','ibu']) : findIdx(hdr2, ['ibu']),
+        usia: findIdx(hdr1, ['usia_saat_ukur','usia','umur','age']),
+        tglUkur: findIdx(hdr1, ['tanggal_pengukuran','tgl_pengukuran','tgl_ukur']),
+        bb: findIdx(hdr1, ['berat_badan','berat','bb','weight']),
+        tb: findIdx(hdr1, ['tinggi_badan','tinggi','tb','panjang','height']),
+        lila: findIdx(hdr1, ['lila','lingkar_lengan']),
+        bbu: findIdx(hdr1, ['bb_u','bbu']),
+        tbu: findIdx(hdr1, ['tb_u','tbu']),
+        stunting: findIdx(hdr1, ['stunting']),
+        ket: findIdx(hdr1, ['ket','keterangan','catatan','note'])
+      };
+      
+      console.log('🔍 Kolom:', idx);
+      
+      if(idx.nama === -1){
+        console.error('❌ Kolom nama tidak ketemu:', hdr1);
+        throw new Error('Kolom "Nama" tidak ditemukan. Header: ' + hdr1.join(', '));
+      }
+      
+      const start = isHdr2 ? hIdx + 2 : hIdx + 1;
+      console.log('📍 Data mulai baris:', start + 1);
+      
+      const cases = [];
+      const getVal = (row, i) => i >= 0 && row[i] !== undefined ? String(row[i]).trim() : '';
+      
+      for(let i = start; i < rows.length; i++){
+        const r = rows[i];
+        if(!r) continue;
+        const nama = getVal(r, idx.nama).replace(/\s+/g,' ');
+        if(!nama || nama.length < 2) continue;
+        if(/^(nama|no|jumlah|total|keterangan|kec|kel|desa|kab)$/i.test(nama)) continue;
+        if(/^\d+$/.test(nama)) continue;
+        
+        const c = buildCase({
+          nama,
+          nik: getVal(r, idx.nik).replace(/[^0-9]/g,''),
+          tgl_lahir: getVal(r, idx.tgl),
+          jk: getVal(r, idx.jk),
+          nama_ayah: getVal(r, idx.ayah).replace(/\s+/g,' '),
+          nama_ibu: getVal(r, idx.ibu).replace(/\s+/g,' '),
+          bb: getVal(r, idx.bb),
+          tb: getVal(r, idx.tb),
+          lila: getVal(r, idx.lila),
+          ket: getVal(r, idx.ket),
+          usiaRaw: getVal(r, idx.usia),
+          tglUkur: getVal(r, idx.tglUkur),
+          giziFromFile: detectGizi(r, idx)
+        });
+        if(c) cases.push(c);
+      }
+      
+      console.log('✅ Hasil parse:', cases.length, 'kasus');
+      return cases;
+    }
+    
+    /* ============ BUILD CASE (FLEKSIBEL) ============ */
+    function buildCase(d){
+      const nama = String(d.nama||'').replace(/\s+/g,' ').trim();
+      if(!nama || nama.length < 2) return null;
+      
+      let jkRaw = String(d.jk||'').toUpperCase().charAt(0);
+      const jk = (jkRaw === 'P') ? 'P' : 'L';
+      
+      let tgl = parseDate(d.tgl_lahir);
+      let usia = 0;
+      if(d.usiaRaw){
+        const m = String(d.usiaRaw).match(/(\d+)/);
+        if(m) usia = parseInt(m[1]);
+      }
+      if(!usia && tgl){
+        const bd = new Date(tgl), n = new Date();
+        usia = Math.max(0, (n.getFullYear()-bd.getFullYear())*12 + (n.getMonth()-bd.getMonth()));
+      }
+      
+      const parseNum = (v) => {
+        const s = String(v||'').replace(',','.').replace(/[^\d.-]/g,'');
+        return parseFloat(s) || 0;
+      };
+      const bb = parseNum(d.bb);
+      const tb = parseNum(d.tb);
+      const lila = parseNum(d.lila);
+      
+      // Deteksi kondisi khusus
+      const ket = String(d.ket||'').toUpperCase();
+      const tidakAda = /TIDAK.*(DITEMUKAN|HADIR)|TDK|BELUM|MENINGGAL/i.test(ket);
+      
+      // ===== STATUS GIZI (FLEKSIBEL) =====
+      let giziFinal = '';
+      let perluDilengkapi = false;
+      
+      // 1. Prioritas: dari kolom file
+      if(d.giziFromFile){
+        giziFinal = d.giziFromFile;
+      }
+      
+      // 2. Kalau dari file kosong, coba hitung dari BB/TB
+      if(!giziFinal && bb > 0 && tb > 0 && usia > 0){
+        const zB = hitungZBBU(bb, usia, jk);
+        const zT = hitungZTBU(tb, usia, jk);
+        giziFinal = klasifikasiZGizi(zB, zT);
+      }
+      
+      // 3. Kalau masih kosong, default Ideal + tanda perlu dilengkapi
+      if(!giziFinal){
+        giziFinal = 'Perlu Dicek';
+        perluDilengkapi = true;
+      }
+      
+      // Tandai perlu dilengkapi kalau BB/TB kosong
+      if(bb === 0 || tb === 0){
+        perluDilengkapi = true;
+      }
+      
+      // Status pendampingan: kalau tidak ditemukan, kasih status khusus
+      let statusPend = 'Belum Dikunjungi';
+      let statusAktif = 'Aktif';
+      if(tidakAda){
+        statusPend = 'Perlu Verifikasi';
+        statusAktif = 'Tidak Pernah Hadir';
+      }
+      
+      return {
+        id: 'CS' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
+        nik: d.nik || '',
+        no_kk: '',
+        nama, jk,
+        tgl_lahir: tgl || '',
+        usia_bulan: usia,
+        nama_ibu: d.nama_ibu || '',
+        nama_ayah: d.nama_ayah || '',
+        alamat: '',
+        desa: '',
+        kecamatan: '',
+        posyandu: '',
+        hp_ortu: '',
+        bb, tb, lila,
+        status_gizi: giziFinal,
+        status_pendampingan: statusPend,
+        status_keaktifan: statusAktif,
+        status_verifikasi: perluDilengkapi ? 'Perlu Dilengkapi' : 'Belum Dikunjungi',
+        team_id: null,
+        riwayat: [],
+        tgl_ukur_terakhir: d.tglUkur ? parseDate(d.tglUkur) : new Date().toISOString().slice(0,10),
+        sumber_data: 'Import BNBA',
+        catatan: d.ket || '',
+        data_lengkap: !perluDilengkapi && !tidakAda
+      };
+    }
+    
+    /* ============ PARSE DATE ============ */
+    function parseDate(s){
+      s = String(s||'').trim().split(' ')[0];
+      if(!s) return '';
+      
+      let m = s.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})$/);
+      if(m){
+        let dd = parseInt(m[1]), mm = parseInt(m[2]), y = m[3];
+        if(mm > 12){ const t = dd; dd = mm; mm = t; }
+        return `${y}-${String(mm).padStart(2,'0')}-${String(dd).padStart(2,'0')}`;
+      }
+      
+      m = s.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
+      if(m) return `${m[1]}-${String(m[2]).padStart(2,'0')}-${String(m[3]).padStart(2,'0')}`;
+      
+      const bulan = {'jan':1,'feb':2,'mar':3,'apr':4,'mei':5,'may':5,'jun':6,'jul':7,'agu':8,'aug':8,'sep':9,'okt':10,'oct':10,'nov':11,'des':12,'dec':12};
+      m = s.toLowerCase().match(/^(\d{1,2})\s+([a-z]{3})\s+(\d{4})$/);
+      if(m){
+        const mm = bulan[m[2]];
+        if(mm) return `${m[3]}-${String(mm).padStart(2,'0')}-${String(parseInt(m[1])).padStart(2,'0')}`;
+      }
+      
+      if(/^\d{5}$/.test(s)){
+        const e = new Date(1899, 11, 30);
+        const d = new Date(e.getTime() + parseInt(s) * 86400000);
+        if(!isNaN(d.getTime())) return d.toISOString().slice(0,10);
+      }
+      return '';
+    }
+    
+    /* ============ WHO Z-SCORE ============ */
+    function interpVal(age, arr){
+      const A = [0,3,6,9,12,18,24,36,48,60];
+      if(age <= A[0]) return arr[0];
+      if(age >= A[A.length-1]) return arr[arr.length-1];
+      for(let i=0;i<A.length-1;i++){ if(age>=A[i] && age<=A[i+1]){ const t=(age-A[i])/(A[i+1]-A[i]); return arr[i]+t*(arr[i+1]-arr[i]); } }
+      return arr[arr.length-1];
+    }
+    function hitungZBBU(bb, age, jk){
+      const M = jk==='L' ? [3.3,6.4,7.9,8.9,9.6,10.9,12.2,14.3,16.3,18.3] : [3.2,5.8,7.3,8.2,8.9,10.2,11.5,13.9,16.1,18.2];
+      const S = jk==='L' ? [0.5,0.8,0.9,0.9,1.0,1.1,1.3,1.5,1.8,2.1] : [0.5,0.7,0.8,0.9,1.0,1.2,1.4,1.6,1.9,2.2];
+      return (bb - interpVal(age, M)) / interpVal(age, S);
+    }
+    function hitungZTBU(tb, age, jk){
+      const M = jk==='L' ? [49.9,61.4,67.6,72.0,75.7,82.3,87.8,96.1,103.3,110.0] : [49.1,59.8,65.9,70.4,74.0,80.7,86.4,95.1,102.7,109.4];
+      const S = jk==='L' ? [1.9,2.1,2.3,2.4,2.5,2.8,3.0,3.5,4.0,4.5] : [1.8,2.1,2.2,2.4,2.5,2.8,3.1,3.6,4.1,4.6];
+      return (tb - interpVal(age, M)) / interpVal(age, S);
+    }
+    function klasifikasiZGizi(zB, zT){
+      if(zT < -2) return 'Stunting';
+      if(zB < -3) return 'Gizi Buruk';
+      if(zB < -2) return 'Gizi Kurang';
+      return 'Ideal';
+    }
+    
+    console.log('✅ PATCH Import Fleksibel aktif — semua data diterima');
+  }
+  
+  waitReady();
+})();
+</script>
 </body>
 </html>
