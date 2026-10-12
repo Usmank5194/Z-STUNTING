@@ -4404,5 +4404,99 @@ tbody tr:hover {
   waitReady();
 })();
 </script>
+  <script>
+/* ========== PATCH: IMPORT TAMBAH vs GANTI ========== */
+(function(){
+  function waitReady(){
+    if(typeof window.importBNBA === 'function' && typeof APP !== 'undefined' && typeof saveState === 'function'){
+      install();
+    } else setTimeout(waitReady, 300);
+  }
+  
+  function install(){
+    if(window._importTambahGantiPatched) return;
+    window._importTambahGantiPatched = true;
+    
+    const origImport = window.importBNBA;
+    
+    window.importBNBA = async function(){
+      if(!APP.state) return;
+      
+      // Simpan snapshot data lama
+      const snapshot = JSON.parse(JSON.stringify(APP.state.cases || []));
+      
+      // Tanya user: Tambah atau Ganti?
+      const modeAdd = confirm(
+        '📥 PILIH MODE IMPORT\n' +
+        '━━━━━━━━━━━━━━━━━━━━━\n\n' +
+        '✅ OK = TAMBAH\n' +
+        'Data baru digabung dengan data lama.\n\n' +
+        '❌ CANCEL = GANTI SEMUA\n' +
+        'Data lama dihapus, diganti data baru.\n\n' +
+        '━━━━━━━━━━━━━━━━━━━━━\n' +
+        'Saat ini: ' + snapshot.length + ' kasus tersimpan.'
+      );
+      
+      // Jalankan import asli
+      await origImport.call(this);
+      
+      // Kalau mode TAMBAH & import berhasil
+      if(modeAdd && (APP.state.cases || []).length > 0 && snapshot.length > 0){
+        const newCases = APP.state.cases.slice();
+        
+        // Gabung: lama + baru
+        const merged = [...snapshot, ...newCases];
+        
+        // Hapus duplikat (NIK + Nama sama)
+        const seen = new Set();
+        const unique = [];
+        let dupCount = 0;
+        
+        merged.forEach(c => {
+          const key = ((c.nik || '').trim() + '|' + (c.nama || '').toLowerCase().trim());
+          if(key === '|' || !c.nama){ unique.push(c); return; }
+          if(seen.has(key)){ dupCount++; return; }
+          seen.add(key);
+          unique.push(c);
+        });
+        
+        APP.state.cases = unique;
+        
+        // Auto-assign ulang untuk kasus baru yang belum punya tim
+        if(typeof autoAssign === 'function') autoAssign();
+        saveState();
+        updateBadge();
+        
+        // Refresh view
+        const active = document.querySelector('.nav-item.active')?.dataset.view || 'kasus';
+        showView(active, document.querySelector('.nav-item.active'));
+        
+        // Notifikasi
+        const added = unique.length - snapshot.length;
+        let msg = `✅ DITAMBAH: ${added} kasus baru\nTotal sekarang: ${unique.length} kasus`;
+        if(dupCount > 0) msg += `\n⚠️ Duplikat di-skip: ${dupCount}`;
+        toast(msg, 'success');
+        
+        console.log('📊 Snapshot lama:', snapshot.length);
+        console.log('📊 Data baru:', newCases.length);
+        console.log('📊 Setelah merge:', unique.length);
+        console.log('📊 Duplikat dihapus:', dupCount);
+      } else if(modeAdd){
+        // Mode tambah tapi data lama kosong — tetap refresh
+        const active = document.querySelector('.nav-item.active')?.dataset.view || 'kasus';
+        showView(active, document.querySelector('.nav-item.active'));
+        toast(`✅ ${APP.state.cases.length} kasus diimport`, 'success');
+      } else {
+        // Mode ganti — tampilkan info
+        toast(`🔄 Data diganti: ${APP.state.cases.length} kasus`, 'success');
+      }
+    };
+    
+    console.log('✅ Patch Import Tambah/Ganti aktif');
+  }
+  
+  waitReady();
+})();
+</script>
 </body>
 </html>
