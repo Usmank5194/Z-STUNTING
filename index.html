@@ -2998,5 +2998,231 @@ div[style*="background: #f3f4f6"] {
   .card, .stat-card, .modal { box-shadow: none !important; background: #fff !important; }
 }
 </style>
+  <script>
+/* ========== PATCH: GRAFIK DASHBOARD + TOP 10 TPK ========== */
+(function(){
+  function waitReady(){
+    if(typeof APP !== 'undefined' && typeof renderDashboard === 'function'){
+      install();
+    } else setTimeout(waitReady, 300);
+  }
+  
+  function install(){
+    if(window._dashboardChartPatched) return;
+    window._dashboardChartPatched = true;
+    
+    const origRenderDashboard = window.renderDashboard;
+    
+    window.renderDashboard = function(c){
+      // Panggil render asli dulu
+      origRenderDashboard.call(this, c);
+      
+      // Tambah grafik setelah card dashboard asli
+      setTimeout(() => {
+        const cases = visibleCases();
+        const tpk = APP.state.tpk || [];
+        if(!cases.length && !tpk.length) return;
+        
+        // ===== DATA UNTUK GRAFIK =====
+        // 1. Per kecamatan
+        const perKec = {};
+        KECAMATAN.forEach(k => perKec[k] = {total:0, stunting:0, visited:0, verified:0});
+        cases.forEach(x => {
+          const k = String(x.kecamatan||'').toUpperCase().trim();
+          if(!perKec[k]) perKec[k] = {total:0, stunting:0, visited:0, verified:0};
+          perKec[k].total++;
+          if(x.status_gizi === 'Stunting') perKec[k].stunting++;
+          if(x.riwayat && x.riwayat.length > 0) perKec[k].visited++;
+          if(x.status_verifikasi === 'Terverifikasi') perKec[k].verified++;
+        });
+        const kecSorted = Object.entries(perKec).filter(([k,d]) => d.total > 0 || tpk.some(t => t.kecamatan === k)).sort((a,b) => b[1].total - a[1].total);
+        const maxKec = Math.max(...kecSorted.map(([k,d]) => d.total), 1);
+        
+        // 2. Per tim TPK — ranking
+        const perTim = {};
+        tpk.forEach(t => perTim[t.teamId] = {t, total:0, visited:0, verified:0, foto:0, gps:0, kunjungan:0});
+        cases.forEach(x => {
+          if(!x.team_id || !perTim[x.team_id]) return;
+          perTim[x.team_id].total++;
+          if(x.riwayat && x.riwayat.length > 0) perTim[x.team_id].visited++;
+          if(x.status_verifikasi === 'Terverifikasi') perTim[x.team_id].verified++;
+          (x.riwayat||[]).forEach(r => {
+            perTim[x.team_id].kunjungan++;
+            if(r.foto && r.foto.length) perTim[x.team_id].foto++;
+            if(r.gps) perTim[x.team_id].gps++;
+          });
+        });
+        
+        // Skor aktivitas: kunjungan (40%) + verifikasi (30%) + foto (20%) + GPS (10%)
+        const timList = Object.values(perTim).filter(t => t.total > 0).map(t => {
+          const pctVisited = t.total ? (t.visited / t.total) * 100 : 0;
+          const pctVerified = t.visited ? (t.verified / t.visited) * 100 : 0;
+          const pctFoto = t.visited ? (t.foto / t.visited) * 100 : 0;
+          const pctGps = t.kunjungan ? (t.gps / t.kunjungan) * 100 : 0;
+          const skor = Math.round(pctVisited * 0.4 + pctVerified * 0.3 + pctFoto * 0.2 + pctGps * 0.1);
+          return {...t, pctVisited, pctVerified, pctFoto, pctGps, skor};
+        }).sort((a,b) => b.skor - a.skor || b.kunjungan - a.kunjungan);
+        
+        const top10 = timList.slice(0, 10);
+        
+        // ===== RENDER =====
+        const container = document.createElement('div');
+        container.className = 'chart-section';
+        container.style.cssText = 'margin-top:16px';
+        
+        // Card 1: Grafik Kasus per Kecamatan (Bar Chart)
+        const maxTotal = maxKec;
+        const barChartHTML = kecSorted.slice(0, 11).map(([kec, d], idx) => {
+          const totalW = maxTotal ? (d.total / maxTotal) * 100 : 0;
+          const stuntingW = maxTotal ? (d.stunting / maxTotal) * 100 : 0;
+          const visitedW = maxTotal ? (d.visited / maxTotal) * 100 : 0;
+          const hue = 190 + (idx * 15) % 120;
+          return `
+            <div style="margin-bottom:14px">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+                <span style="font-weight:700;font-size:13px;color:var(--soft-text)">${esc(kec)}</span>
+                <span style="font-size:12px;color:var(--soft-text-dim)">
+                  <b style="color:var(--soft-text)">${d.total}</b> kasus · 
+                  <b style="color:#e53935">${d.stunting}</b> stunting · 
+                  <b style="color:#26c6da">${d.visited}</b> dikunjungi
+                </span>
+              </div>
+              <div style="position:relative;height:22px;background:var(--soft-bg);border-radius:11px;box-shadow:inset 2px 2px 6px rgba(174,191,212,.4),inset -2px -2px 6px rgba(255,255,255,.9);overflow:hidden">
+                <div style="position:absolute;top:0;left:0;height:100%;width:${totalW}%;background:linear-gradient(90deg,#b2ebf2,#80deea);border-radius:11px;transition:.4s"></div>
+                <div style="position:absolute;top:0;left:0;height:100%;width:${stuntingW}%;background:linear-gradient(90deg,#ffcdd2,#ef9a9a);border-radius:11px;transition:.4s"></div>
+                <div style="position:absolute;top:0;left:0;height:100%;width:${visitedW}%;background:linear-gradient(90deg,#c8e6c9,#a5d6a7);border-radius:11px;transition:.4s"></div>
+              </div>
+            </div>`;
+        }).join('');
+        
+        // Card 2: Capaian per Kecamatan (Radial Progress)
+        const achievHTML = kecSorted.slice(0, 11).map(([kec, d]) => {
+          const pct = d.total ? Math.round(d.visited / d.total * 100) : 0;
+          const pctVerified = d.visited ? Math.round(d.verified / d.visited * 100) : 0;
+          const circumference = 2 * Math.PI * 28;
+          const offset = circumference - (pct / 100) * circumference;
+          const color = pct > 50 ? '#66bb6a' : (pct > 20 ? '#ffb74d' : '#ef5350');
+          return `
+            <div style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px;border-radius:16px;background:var(--soft-bg);box-shadow:3px 3px 8px rgba(174,191,212,.3),-3px -3px 8px rgba(255,255,255,.9)">
+              <div style="position:relative;width:70px;height:70px">
+                <svg width="70" height="70" viewBox="0 0 70 70">
+                  <circle cx="35" cy="35" r="28" fill="none" stroke="#e0e8f0" stroke-width="7"/>
+                  <circle cx="35" cy="35" r="28" fill="none" stroke="${color}" stroke-width="7" 
+                          stroke-dasharray="${circumference}" stroke-dashoffset="${offset}"
+                          stroke-linecap="round" transform="rotate(-90 35 35)" style="transition:.6s"/>
+                  <text x="35" y="40" text-anchor="middle" font-size="13" font-weight="800" fill="${color}">${pct}%</text>
+                </svg>
+              </div>
+              <div style="font-weight:700;font-size:11px;color:var(--soft-text);text-align:center;line-height:1.2">${esc(kec)}</div>
+              <div style="font-size:10px;color:var(--soft-text-muted)">${d.visited}/${d.total}</div>
+            </div>`;
+        }).join('');
+        
+        // Card 3: Top 10 TPK Paling Aktif
+        const medalEmojis = ['🥇','🥈','🥉'];
+        const top10HTML = top10.map((t, i) => {
+          const medal = medalEmojis[i] || '#' + (i+1);
+          const isTop3 = i < 3;
+          const rankColor = i === 0 ? '#ffd54f' : i === 1 ? '#b0bec5' : i === 2 ? '#ffb74d' : 'var(--soft-text-muted)';
+          return `
+            <div style="display:grid;grid-template-columns:44px 1fr 80px 100px;gap:10px;align-items:center;padding:10px 12px;border-radius:14px;background:${isTop3 ? 'linear-gradient(135deg,rgba(255,213,79,.15),rgba(255,183,77,.1))' : 'var(--soft-bg)'};box-shadow:${isTop3 ? '4px 4px 10px rgba(174,191,212,.3),-3px -3px 8px rgba(255,255,255,.9),inset 0 0 20px rgba(255,213,79,.15)' : '2px 2px 5px rgba(174,191,212,.2),-2px -2px 5px rgba(255,255,255,.7)'};margin-bottom:6px">
+              <div style="font-size:22px;text-align:center;font-weight:800;color:${rankColor}">${medal}</div>
+              <div>
+                <div style="font-weight:700;font-size:13px;color:var(--soft-text)">${esc(t.t.bidan?.nama || t.t.desa)}</div>
+                <div style="font-size:11px;color:var(--soft-text-dim)">Tim ${t.t.tim} · ${esc(t.t.desa)} · ${esc(t.t.kecamatan)}</div>
+              </div>
+              <div style="text-align:center">
+                <div style="font-size:11px;color:var(--soft-text-muted)">SKOR</div>
+                <div style="font-size:18px;font-weight:800;color:${rankColor}">${t.skor}</div>
+              </div>
+              <div style="text-align:right;font-size:10.5px;color:var(--soft-text-dim);line-height:1.4">
+                🏠 ${t.visited}/${t.total} kunjungan<br>
+                ✅ ${t.verified} verifikasi<br>
+                📸 ${t.foto} foto · 📍 ${t.gps} GPS
+              </div>
+            </div>`;
+        }).join('');
+        
+        container.innerHTML = `
+          <!-- ============ GRAFIK KASUS PER KECAMATAN ============ -->
+          <div class="card" style="margin-bottom:16px">
+            <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+              <div>
+                <div class="card-title">📊 Grafik Kasus per Kecamatan</div>
+                <div class="card-sub">Total · Stunting · Dikunjungi</div>
+              </div>
+              <div style="display:flex;gap:12px;font-size:11px;flex-wrap:wrap">
+                <span style="display:flex;align-items:center;gap:4px"><span style="width:14px;height:8px;background:linear-gradient(90deg,#b2ebf2,#80deea);border-radius:4px"></span> Total</span>
+                <span style="display:flex;align-items:center;gap:4px"><span style="width:14px;height:8px;background:linear-gradient(90deg,#ffcdd2,#ef9a9a);border-radius:4px"></span> Stunting</span>
+                <span style="display:flex;align-items:center;gap:4px"><span style="width:14px;height:8px;background:linear-gradient(90deg,#c8e6c9,#a5d6a7);border-radius:4px"></span> Dikunjungi</span>
+              </div>
+            </div>
+            <div style="padding:4px 0">
+              ${barChartHTML || '<div class="empty">Belum ada data</div>'}
+            </div>
+          </div>
+          
+          <!-- ============ CAPAIAN PER KECAMATAN ============ -->
+          <div class="card" style="margin-bottom:16px">
+            <div class="card-header">
+              <div>
+                <div class="card-title">🎯 Capaian Kunjungan per Kecamatan</div>
+                <div class="card-sub">Persentase sasaran yang sudah dikunjungi TPK</div>
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:12px;padding:8px 0">
+              ${achievHTML || '<div class="empty">Belum ada data</div>'}
+            </div>
+          </div>
+          
+          <!-- ============ TOP 10 TPK ============ -->
+          <div class="card" style="margin-bottom:16px">
+            <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+              <div>
+                <div class="card-title">🏆 Top 10 TPK Paling Aktif</div>
+                <div class="card-sub">Kandidat reward · Skor dari kunjungan, verifikasi, foto, & GPS</div>
+              </div>
+              <button class="btn btn-sm btn-wa" onclick="shareLeaderboard()">📤 Bagikan</button>
+            </div>
+            <div style="padding:4px 0">
+              ${top10HTML || '<div class="empty">Belum ada aktivitas TPK</div>'}
+            </div>
+            <div style="margin-top:14px;padding:12px;background:var(--soft-bg);border-radius:12px;font-size:11.5px;color:var(--soft-text-dim);line-height:1.6">
+              💡 <b>Rumus Skor:</b> Kunjungan (40%) + Verifikasi (30%) + Foto Bukti (20%) + GPS Aktif (10%)
+            </div>
+          </div>
+        `;
+        
+        // Append ke content
+        c.appendChild(container);
+        
+        // Simpan data untuk share
+        window._top10Data = top10;
+      }, 150);
+    };
+    
+    // ===== Share leaderboard ke WA =====
+    window.shareLeaderboard = function(){
+      const top10 = window._top10Data || [];
+      if(!top10.length){ toast('Belum ada data','warning'); return; }
+      const now = new Date().toLocaleDateString('id-ID',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+      const lines = top10.map((t, i) => {
+        const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i+1}`;
+        return `${medal} *${t.t.bidan?.nama || t.t.desa}*\n   Tim ${t.t.tim} · ${t.t.desa}\n   Skor: ${t.skor} · 🏠 ${t.visited}/${t.total} · ✅ ${t.verified}`;
+      }).join('\n\n');
+      const msg = `🏆 *TOP 10 TPK PALING AKTIF*\n📅 ${now}\n\n━━━━━━━━━━━━━━━━━━━━\n\n${lines}\n\n━━━━━━━━━━━━━━━━━━━━\n\n💡 Skor = Kunjungan 40% + Verifikasi 30% + Foto 20% + GPS 10%\n\n🎯 _Bersinergi Mendampingi Keluarga,_\n_Wujudkan Jeneponto Zero Stunting!_`;
+      
+      copyToClipboard(msg).then(() => {
+        toast('📋 Pesan dicopy — tempel di grup WA','success');
+        setTimeout(() => window.open(WA_GRUP_TPK,'_blank'), 500);
+      }).catch(() => toast('⚠️ Gagal copy','warning'));
+    };
+    
+    console.log('✅ Patch Grafik Dashboard + Top 10 TPK aktif');
+  }
+  
+  waitReady();
+})();
+</script>
 </body>
 </html>
