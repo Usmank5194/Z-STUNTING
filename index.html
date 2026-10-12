@@ -4677,5 +4677,222 @@ tbody tr:hover {
   waitReady();
 })();
 </script>
+  <script>
+/* ========== PATCH: KASUS TANPA DESA (KECAMATAN LEVEL) ========== */
+(function(){
+  function waitReady(){
+    if(typeof APP !== 'undefined' && typeof saveState === 'function'){
+      install();
+    } else setTimeout(waitReady, 300);
+  }
+  
+  function install(){
+    if(window._levelKecPatched) return;
+    window._levelKecPatched = true;
+    
+    /* ====== 1. AUTO ASSIGN — Distribusi khusus level kecamatan ====== */
+    window.assignKecamatanLevel = function(silent){
+      const tpk = APP.state.tpk || [];
+      const cases = APP.state.cases || [];
+      if(!tpk.length || !cases.length){ 
+        if(!silent) toast('Data TPK atau kasus kosong','error'); 
+        return; 
+      }
+      
+      // Index TPK per kecamatan
+      const perKec = {};
+      tpk.forEach(t => {
+        const k = String(t.kecamatan||'').toUpperCase().trim();
+        if(!perKec[k]) perKec[k] = [];
+        perKec[k].push(t);
+      });
+      
+      // Counter kasus per TPK
+      const counters = {};
+      tpk.forEach(t => counters[t.teamId] = 0);
+      
+      // Pre-count existing assignments untuk balance
+      cases.forEach(c => {
+        if(c.team_id && counters[c.team_id] !== undefined) counters[c.team_id]++;
+      });
+      
+      let withDesa = 0, withoutDesa = 0, failed = 0;
+      
+      cases.forEach(c => {
+        const kec = String(c.kecamatan||'').toUpperCase().trim();
+        const desa = String(c.desa||'').toUpperCase().trim();
+        
+        // Kalau sudah ada team_id, skip
+        if(c.team_id) return;
+        
+        // Kalau tidak ada kecamatan, tidak bisa assign
+        if(!kec){ failed++; return; }
+        
+        let pool = [];
+        
+        if(desa){
+          // Prioritas 1: TPK desa di kecamatan itu
+          const kd = desa.replace(/[^A-Z0-9]/g,'');
+          pool = tpk.filter(t => 
+            String(t.kecamatan||'').toUpperCase().trim() === kec &&
+            String(t.desa||'').toUpperCase().replace(/[^A-Z0-9]/g,'') === kd
+          );
+          // Fallback: TPK desa manapun di kecamatan sama
+          if(!pool.length){
+            pool = tpk.filter(t => 
+              String(t.kecamatan||'').toUpperCase().trim() === kec
+            );
+          }
+          if(pool.length) withDesa++;
+        } else {
+          // Hanya kecamatan — pool = semua TPK di kecamatan
+          pool = perKec[kec] || [];
+          if(pool.length) withoutDesa++;
+        }
+        
+        if(!pool.length){ failed++; return; }
+        
+        // Round robin — pilih TPK dengan kasus paling sedikit
+        pool.sort((a,b) => counters[a.teamId] - counters[b.teamId]);
+        c.team_id = pool[0].teamId;
+        counters[pool[0].teamId]++;
+        
+        // Tandai kasus level kecamatan
+        if(!desa){
+          c.perlu_verifikasi_desa = true;
+        }
+      });
+      
+      // Hitung ulang kasus per tim
+      tpk.forEach(t => {
+        t.jumlah_kasus = cases.filter(c => c.team_id === t.teamId).length;
+      });
+      
+      saveState();
+      updateBadge();
+      
+      if(!silent){
+        let msg = '✅ ' + withDesa + ' kasus (dengan desa)';
+        if(withoutDesa > 0) msg += ' + ' + withoutDesa + ' kasus (kecamatan saja)';
+        if(failed > 0) msg += ' · ⚠️ ' + failed + ' gagal';
+        toast(msg, 'success');
+        console.log('✅ Assign:', {withDesa, withoutDesa, failed});
+      }
+      
+      return {withDesa, withoutDesa, failed};
+    };
+    
+    /* ====== 2. AUTO-RUN SETELAH IMPORT ====== */
+    const origImport = window.importBNBA;
+    if(origImport){
+      window.importBNBA = async function(){
+        await origImport.call(this);
+        setTimeout(() => {
+          if((APP.state.cases||[]).length){
+            const res = window.assignKecamatanLevel(true);
+            const total = APP.state.cases.length;
+            const withTeam = APP.state.cases.filter(c => c.team_id).length;
+            const needVerify = APP.state.cases.filter(c => c.perlu_verifikasi_desa).length;
+            
+            let msg = '📊 ' + withTeam + '/' + total + ' kasus ke TPK';
+            if(needVerify > 0) msg += ' · 🔍 ' + needVerify + ' perlu cek desa';
+            toast(msg, withTeam > 0 ? 'success' : 'warning');
+            
+            const active = document.querySelector('.nav-item.active')?.dataset.view;
+            if(active) showView(active, document.querySelector('.nav-item.active'));
+          }
+        }, 800);
+      };
+    }
+    
+    /* ====== 3. OVERRIDE renderKasus — Tambah badge "Perlu Verifikasi" ====== */
+    const origRenderKasus = window.renderKasus;
+    if(origRenderKasus){
+      window.renderKasus = function(c){
+        origRenderKasus.call(this, c);
+        setTimeout(() => {
+          // Tambah badge di setiap baris kasus
+          const rows = c.querySelectorAll('table tbody tr');
+          const pageCases = getFilteredCases().slice(
+            ((APP.page||1)-1)*APP.pageSize,
+            ((APP.page||1)-1)*APP.pageSize + APP.pageSize
+          );
+          rows.forEach((row, i) => {
+            const x = pageCases[i];
+            if(x && x.perlu_verifikasi_desa){
+              const statusCell = row.querySelector('td:nth-child(6)');
+              if(statusCell && !statusCell.querySelector('.verify-desa-badge')){
+                const badge = document.createElement('div');
+                badge.className = 'verify-desa-badge';
+                badge.style.cssText = 'margin-top:4px;display:inline-block;background:#fef3c7;color:#92400e;padding:2px 6px;border-radius:6px;font-size:10px;font-weight:700';
+                badge.innerHTML = '🔍 Cek Desa';
+                statusCell.appendChild(badge);
+              }
+            }
+          });
+        }, 200);
+      };
+    }
+    
+    /* ====== 4. TOMBOL DI PENGATURAN ====== */
+    const origPengaturan = window.renderPengaturan;
+    if(origPengaturan){
+      window.renderPengaturan = function(c){
+        origPengaturan.call(this, c);
+        setTimeout(() => {
+          const cards = c.querySelectorAll('.card');
+          cards.forEach(card => {
+            if(card.textContent.includes('Backup') && card.textContent.includes('Reset') && !card.querySelector('.btn-level-kec')){
+              const wrap = card.querySelector('div[style*="flex"]');
+              if(wrap){
+                const btn = document.createElement('button');
+                btn.className = 'btn-level-kec';
+                btn.style.cssText = 'background:linear-gradient(135deg,#8b5cf6,#7c3aed);color:#fff;padding:10px 18px;border-radius:10px;border:none;font-weight:700;cursor:pointer;font-size:13px';
+                btn.innerHTML = '🎯 Assign Kasus Level Kecamatan';
+                btn.onclick = () => {
+                  if(confirm('Assign semua kasus (termasuk yang tanpa desa) ke TPK?\n\nKasus tanpa desa akan ditandai "Perlu Verifikasi Desa".')){
+                    window.assignKecamatanLevel();
+                  }
+                };
+                wrap.appendChild(btn);
+              }
+            }
+          });
+        }, 200);
+      };
+    }
+    
+    /* ====== 5. TAMBAH FILTER "TANPA DESA" di Data Kasus ====== */
+    const origFilters = window.updateFilter;
+    if(origFilters){
+      // Extend APP.filters untuk cek "perlu_verifikasi_desa"
+      const origGetFiltered = window.getFilteredCases;
+      window.getFilteredCases = function(){
+        let arr = origGetFiltered.call(this);
+        // Kalau ada filter khusus
+        if(APP.filters.hanya_tanpa_desa){
+          arr = arr.filter(c => c.perlu_verifikasi_desa);
+        }
+        return arr;
+      };
+    }
+    
+    /* ====== 6. AUTO-RUN SAAT HALAMAN LOAD (jika ada kasus tanpa team) ====== */
+    setTimeout(() => {
+      if(APP.user && APP.user.role === 'admin' && (APP.state.cases||[]).length > 0){
+        const unassigned = (APP.state.cases||[]).filter(c => !c.team_id).length;
+        if(unassigned > 0){
+          console.log('⚠️ ' + unassigned + ' kasus tanpa tim — auto assign...');
+          window.assignKecamatanLevel(true);
+        }
+      }
+    }, 3000);
+    
+    console.log('✅ Patch Kasus Level Kecamatan aktif');
+  }
+  
+  waitReady();
+})();
+</script>
 </body>
 </html>
