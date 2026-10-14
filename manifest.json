@@ -1,0 +1,26 @@
+{
+  "name": "Z-STUNTING · DP2KBP3A Jeneponto",
+  "short_name": "Z-STUNTING",
+  "description": "Pendampingan keluarga stunting Kabupaten Jeneponto",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#ffffff",
+  "theme_color": "#0284c7",
+  "lang": "id",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
