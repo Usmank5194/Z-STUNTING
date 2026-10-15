@@ -1,26 +1,39 @@
 {
+  "id": "/Z-STUNTING/",
   "name": "Z-STUNTING · DP2KBP3A Jeneponto",
   "short_name": "Z-STUNTING",
-  "description": "Pendampingan keluarga stunting Kabupaten Jeneponto",
+  "description": "Sistem Pendampingan Keluarga Stunting Kabupaten Jeneponto — Satu Data, Satu Aksi, Menuju Jeneponto Bahagia",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui", "browser"],
   "orientation": "portrait",
-  "background_color": "#ffffff",
+  "background_color": "#e8eef5",
   "theme_color": "#0284c7",
   "lang": "id",
+  "dir": "ltr",
+  "categories": ["health", "government", "productivity"],
+  "prefer_related_applications": false,
   "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
     {
-      "src": "icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any maskable"
+      "name": "Kunjungan Saya",
+      "short_name": "Kunjungan",
+      "description": "Buka daftar kunjungan rumah",
+      "url": "./index.html?view=kunjungan",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
     },
     {
-      "src": "icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
+      "name": "Data Kasus",
+      "short_name": "Kasus",
+      "description": "Buka data BNBA",
+      "url": "./index.html?view=kasus",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
     }
   ]
 }
