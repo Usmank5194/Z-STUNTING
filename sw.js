@@ -7,8 +7,8 @@
    - Ikon/gambar: Cache-first
    ================================================================ */
 
-const CACHE = 'zstunting-v4';
-const CACHE_STATIC = 'zstunting-static-v4';
+const CACHE = 'zstunting-v5';
+const CACHE_STATIC = 'zstunting-static-v5';
 
 const SHELL = [
   './',
