@@ -158,6 +158,14 @@ tbody tr:hover{background:#f0f9ff}
 .empty{text-align:center;padding:40px 20px;color:var(--gray-500)}
 .empty .ic{font-size:44px;opacity:.3;margin-bottom:8px}
 .menu-toggle{display:none;background:#fff;border:1px solid var(--gray-300);border-radius:8px;padding:8px 10px;font-size:16px}
+.kec-chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:8px;margin-bottom:8px;-webkit-overflow-scrolling:touch}
+.kec-chips button{flex:0 0 auto;padding:7px 12px;border:1px solid var(--gray-300);background:#fff;border-radius:20px;font-size:12px;font-weight:600;color:var(--gray-600,#475569);white-space:nowrap}
+.kec-chips button b{margin-left:4px;color:var(--primary)}
+.kec-chips button.on{background:var(--primary);color:#fff;border-color:var(--primary)}
+.kec-chips button.on b{color:#fff}
+.kec-chips button.zero{opacity:.45}
+.tpk-group{grid-column:1/-1;font-weight:800;font-size:13px;color:var(--primary);padding:8px 2px 0;border-bottom:2px solid var(--primary-light,#e0f2fe)}
+.tpk-group span{font-weight:600;color:var(--gray-500);font-size:11.5px;margin-left:6px}
 .team-card{background:#fff;border:1px solid var(--gray-200);border-radius:12px;padding:14px;cursor:pointer;transition:.2s}
 .team-card:hover{border-color:var(--primary);box-shadow:0 4px 12px rgba(2,132,199,.1);transform:translateY(-2px)}
 .team-card .team-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
@@ -304,6 +312,7 @@ const APP = {
   user:null, state:{cases:[],tpk:[],accounts:[],auditLog:[]},
   filters:{search:'',kecamatan:'',status_gizi:'',status_pendampingan:''},
   page:1, pageSize:20,
+  tf:{search:'',kec:'',page:1}, pf:'', kjLimit:60,
   currentDetail:null, currentEdit:null, currentKunjungan:null, currentTPK:null
 };
 let _sb = null;
@@ -763,7 +772,7 @@ function renderKunjungan(c){
         <table>
           <thead><tr><th>#</th><th>Nama</th><th>Desa</th><th>Gizi</th><th>Aksi</th></tr></thead>
           <tbody>
-            ${my.slice(0,80).map((x,i) => `
+            ${my.slice(0,APP.kjLimit).map((x,i) => `
               <tr>
                 <td>${i+1}</td>
                 <td><div style="font-weight:600">${esc(x.nama)}</div><div style="font-size:11px;color:var(--gray-500)">${x.usia_bulan||0} bln</div></td>
@@ -777,7 +786,9 @@ function renderKunjungan(c){
               </tr>`).join('')}
           </tbody>
         </table>
-      </div>`}
+      </div>
+      <div style="margin-top:12px;font-size:13px;text-align:center">Menampilkan <b>${Math.min(APP.kjLimit,my.length)}</b> dari <b>${fmtNum(my.length)}</b>
+        ${my.length > APP.kjLimit ? `<div style="margin-top:8px"><button class="btn btn-outline" onclick="APP.kjLimit+=60;renderKunjungan(document.getElementById('content'))">⬇️ Tampilkan 60 lagi</button></div>` : ''}</div>`}
     </div>`;
 }
 
@@ -859,30 +870,86 @@ function exportExcelReport(){
 }
 
 /* ==================== TPK ==================== */
+const TPK_PER_PAGE = 30;
+const kecKey = k => String(k||'').trim().toUpperCase();
+function tpkSorted(){
+  const ki = k => { const i = KECAMATAN.indexOf(kecKey(k)); return i < 0 ? 99 : i; };
+  return [...(APP.state.tpk||[])].sort((a,b) =>
+    ki(a.kecamatan)-ki(b.kecamatan) || kecKey(a.kecamatan).localeCompare(kecKey(b.kecamatan)) ||
+    String(a.desa||'').localeCompare(String(b.desa||''),'id') || (Number(a.tim)||0)-(Number(b.tim)||0));
+}
+function tpkFiltered(){
+  const f = APP.tf; let a = tpkSorted();
+  if(f.kec) a = a.filter(t => kecKey(t.kecamatan) === f.kec);
+  if(f.search){
+    const q = f.search.toLowerCase();
+    a = a.filter(t => [t.desa,t.kecamatan,t.bidan?.nama,t.pkk?.nama,t.kb?.nama].some(v => String(v||'').toLowerCase().includes(q)));
+  }
+  return a;
+}
+let _tpkT = null;
+function tpkFilter(key,val){
+  APP.tf[key] = val; APP.tf.page = 1;
+  if(_tpkT) clearTimeout(_tpkT);
+  _tpkT = setTimeout(() => {
+    const inp = document.getElementById('tpkSearch'), pos = inp ? inp.selectionStart : null;
+    renderTPK(document.getElementById('content'));
+    const n = document.getElementById('tpkSearch');
+    if(n && key === 'search'){ n.focus(); if(pos !== null){ try{ n.setSelectionRange(pos,pos); }catch(e){} } }
+  }, key === 'search' ? 250 : 0);
+}
+function tpkPage(p){ APP.tf.page = p; renderTPK(document.getElementById('content')); window.scrollTo({top:0}); }
 function renderTPK(c){
-  const tpk = APP.state.tpk || [];
+  const all = APP.state.tpk || [];
   const byKec = {};
-  tpk.forEach(t => { byKec[t.kecamatan] = (byKec[t.kecamatan]||0) + 1; });
-  c.innerHTML = `
-    <div class="stats-grid">
-      <div class="stat-card"><div class="icon" style="background:var(--primary-light);color:var(--primary)">👥</div><div class="label">Total Tim</div><div class="value">${fmtNum(tpk.length)}</div></div>
-      <div class="stat-card"><div class="icon" style="background:var(--info-light);color:var(--info)">🧑‍⚕️</div><div class="label">Total Personel</div><div class="value">${fmtNum(tpk.length * 3)}</div></div>
-      <div class="stat-card"><div class="icon" style="background:var(--warning-light);color:var(--warning)">🗺️</div><div class="label">Kecamatan</div><div class="value">${Object.keys(byKec).length}</div></div>
-      <div class="stat-card"><div class="icon" style="background:var(--success-light);color:var(--success)">🏘️</div><div class="label">Desa</div><div class="value">${new Set(tpk.map(t=>t.desa)).size}</div></div>
-    </div>
-    <div class="card">
-      <div class="card-header"><div><div class="card-title">👥 Semua Tim TPK</div><div class="card-sub">Klik ✏️ untuk ganti anggota yang keluar/pindah</div></div></div>
-      ${tpk.length === 0 ? '<div class="empty"><div class="ic">👥</div><div>Belum ada data TPK</div></div>' : `
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px">
-        ${tpk.slice(0,80).map(t => `
+  all.forEach(t => { const k = kecKey(t.kecamatan) || '-'; byKec[k] = (byKec[k]||0) + 1; });
+  const kecList = [...KECAMATAN, ...Object.keys(byKec).filter(k => !KECAMATAN.includes(k))];
+  const filtered = tpkFiltered();
+  const totalPages = Math.max(1, Math.ceil(filtered.length / TPK_PER_PAGE));
+  if(APP.tf.page > totalPages) APP.tf.page = 1;
+  const start = (APP.tf.page-1) * TPK_PER_PAGE;
+  const pageData = filtered.slice(start, start + TPK_PER_PAGE);
+  const withData = Object.keys(byKec).length;
+  let lastKec = null;
+  const cards = pageData.map(t => {
+    const k = kecKey(t.kecamatan) || '-';
+    const head = k !== lastKec ? `<div class="tpk-group">${esc(k)} <span>${fmtNum(byKec[k]||0)} tim</span></div>` : '';
+    lastKec = k;
+    return head + `
           <div class="team-card">
-            <div class="team-header"><div class="team-title">Tim ${t.tim} · ${esc(t.desa)}</div><span class="badge badge-info">${esc(t.kecamatan)}</span></div>
+            <div class="team-header"><div class="team-title">Tim ${esc(t.tim)} · ${esc(t.desa)}</div><span class="badge badge-info">${esc(t.kecamatan)}</span></div>
             <div class="member bidan"><div class="ic">🩺</div><div><div style="font-weight:600">${esc(t.bidan?.nama||'-')}</div><div style="font-size:10.5px;color:var(--gray-500)">Bidan</div></div></div>
             <div class="member pkk"><div class="ic">👩</div><div><div style="font-weight:600">${esc(t.pkk?.nama||'-')}</div><div style="font-size:10.5px;color:var(--gray-500)">Kader PKK</div></div></div>
             <div class="member kb"><div class="ic">👨‍👩‍👧</div><div><div style="font-weight:600">${esc(t.kb?.nama||'-')}</div><div style="font-size:10.5px;color:var(--gray-500)">Kader KB</div></div></div>
             <button class="btn btn-sm btn-outline" style="width:100%;margin-top:8px;justify-content:center" onclick="openEditTPK('${t.teamId}')">✏️ Edit Tim</button>
-          </div>`).join('')}
-      </div>`}
+          </div>`;
+  }).join('');
+  c.innerHTML = `
+    <div class="stats-grid">
+      <div class="stat-card"><div class="icon" style="background:var(--primary-light);color:var(--primary)">👥</div><div class="label">Total Tim</div><div class="value">${fmtNum(all.length)}</div></div>
+      <div class="stat-card"><div class="icon" style="background:var(--info-light);color:var(--info)">🧑‍⚕️</div><div class="label">Total Personel</div><div class="value">${fmtNum(all.length * 3)}</div></div>
+      <div class="stat-card"><div class="icon" style="background:var(--warning-light);color:var(--warning)">🗺️</div><div class="label">Kecamatan</div><div class="value">${withData}</div></div>
+      <div class="stat-card"><div class="icon" style="background:var(--success-light);color:var(--success)">🏘️</div><div class="label">Desa</div><div class="value">${new Set(all.map(t=>kecKey(t.kecamatan)+'|'+t.desa)).size}</div></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><div><div class="card-title">👥 Semua Tim TPK</div><div class="card-sub">Klik ✏️ untuk ganti anggota yang keluar/pindah</div></div></div>
+      ${all.length === 0 ? '<div class="empty"><div class="ic">👥</div><div>Belum ada data TPK</div></div>' : `
+      <div class="kec-chips">
+        <button class="${APP.tf.kec===''?'on':''}" onclick="tpkFilter('kec','')">Semua <b>${fmtNum(all.length)}</b></button>
+        ${kecList.map(k => `<button class="${APP.tf.kec===k?'on':''}${byKec[k]?'':' zero'}" onclick="tpkFilter('kec','${esc(k)}')">${esc(k)} <b>${fmtNum(byKec[k]||0)}</b></button>`).join('')}
+      </div>
+      <div class="filters">
+        <input type="text" id="tpkSearch" placeholder="🔍 Cari desa atau nama anggota..." value="${esc(APP.tf.search)}" oninput="tpkFilter('search',this.value)">
+        <button class="btn btn-outline" onclick="APP.tf={search:'',kec:'',page:1};renderTPK(document.getElementById('content'))">🔄 Reset</button>
+      </div>
+      <div style="margin-bottom:10px;font-size:13px">Menampilkan <b>${filtered.length ? start+1 : 0}–${start+pageData.length}</b> dari <b>${fmtNum(filtered.length)}</b> tim</div>
+      ${filtered.length === 0 ? '<div class="empty"><div class="ic">🔍</div><div>Tidak ada tim yang cocok</div></div>' : `
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px">${cards}</div>
+      ${totalPages > 1 ? `<div class="pagination"><div>Hal ${APP.tf.page}/${totalPages}</div><div class="pages">
+        <button ${APP.tf.page===1?'disabled':''} onclick="tpkPage(${APP.tf.page-1})">‹</button>
+        ${pageRange(APP.tf.page,totalPages).map(p => p==='...'?'<span style="padding:6px">...</span>':`<button class="${p===APP.tf.page?'active':''}" onclick="tpkPage(${p})">${p}</button>`).join('')}
+        <button ${APP.tf.page===totalPages?'disabled':''} onclick="tpkPage(${APP.tf.page+1})">›</button>
+      </div></div>`:''}`}`}
     </div>`;
 }
 function openEditTPK(teamId){
@@ -929,19 +996,23 @@ function renderProgress(c){
       if(x.status_verifikasi === 'Terverifikasi') stat[x.team_id].verified++;
     }
   });
-  const list = Object.values(stat).sort((a,b) => b.total - a.total);
+  let list = Object.values(stat).sort((a,b) => b.total - a.total);
+  if(APP.pf) list = list.filter(s => kecKey(s.t.kecamatan) === APP.pf);
   c.innerHTML = `
     <div class="card">
-      <div class="card-header"><div><div class="card-title">📈 Kinerja Semua Tim</div></div></div>
+      <div class="card-header"><div><div class="card-title">📈 Kinerja Semua Tim</div><div class="card-sub">Menampilkan ${fmtNum(list.length)} tim</div></div></div>
+      <div class="filters">
+        <select onchange="APP.pf=this.value;renderProgress(document.getElementById('content'))"><option value="">✅ Semua Kecamatan</option>${KECAMATAN.map(k=>`<option value="${k}" ${APP.pf===k?'selected':''}>${k}</option>`).join('')}</select>
+      </div>
       <div class="table-wrap">
         <table>
           <thead><tr><th>#</th><th>Tim</th><th>Desa</th><th>Kec.</th><th>Total</th><th>Progress</th><th>Terverifikasi</th></tr></thead>
           <tbody>
-            ${list.slice(0,100).map((s,i) => {
+            ${list.map((s,i) => {
               const pct = s.total ? Math.round(s.grad/s.total*100) : 0;
               return `<tr>
                 <td>${i+1}</td>
-                <td><b>Tim ${s.t.tim}</b></td>
+                <td><b>Tim ${esc(s.t.tim)}</b></td>
                 <td>${esc(s.t.desa)}</td>
                 <td style="font-size:12px">${esc(s.t.kecamatan)}</td>
                 <td>${s.total}</td>
