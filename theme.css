@@ -775,7 +775,93 @@ hr, .divider {
     border: 1px solid #E5E9F2 !important;
   }
 }
+/* ================================================================
+   FIX v2 — PAKSA SIDEBAR JADI NAVY GELAP
+   (karena CSS bawaan index.html lebih kuat dari theme.css)
+   ================================================================ */
 
+/* Paksa sidebar background gelap — pakai !important ganda */
+html body aside.sidebar,
+html body .sidebar,
+html body #sidebar,
+html body [class*="sidebar"] {
+  background: linear-gradient(180deg, #1E2A78 0%, #151F5C 100%) !important;
+  background-color: #1E2A78 !important;
+  border-right: none !important;
+}
+
+/* Paksa semua tulisan nav jadi putih */
+html body .sidebar *,
+html body #sidebar *,
+html body [class*="sidebar"] * {
+  color: rgba(255, 255, 255, 0.85) !important;
+}
+
+/* Nav item hover */
+html body .sidebar .nav-item:hover,
+html body #sidebar .nav-item:hover {
+  background: rgba(0, 201, 255, 0.15) !important;
+  color: #FFFFFF !important;
+}
+
+/* Nav item aktif — cyan */
+html body .sidebar .nav-item.active,
+html body #sidebar .nav-item.active,
+html body .sidebar .nav-item[class*="active"] {
+  background: linear-gradient(135deg, #00C9FF, #0091EA) !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 4px 15px rgba(0, 201, 255, 0.4) !important;
+}
+
+html body .sidebar .nav-item.active *,
+html body #sidebar .nav-item.active * {
+  color: #FFFFFF !important;
+}
+
+/* Brand / logo text */
+html body .sidebar .brand h1,
+html body .sidebar .brand-name,
+html body #sidebar .brand h1 {
+  color: #FFFFFF !important;
+}
+
+/* Section title (MENU UTAMA, LAINNYA, dll) */
+html body .sidebar .section-title,
+html body .sidebar .nav-section,
+html body .sidebar [class*="section"],
+html body #sidebar [class*="section"] {
+  color: rgba(255, 255, 255, 0.45) !important;
+  font-weight: 700 !important;
+  letter-spacing: 1.5px !important;
+}
+
+/* User info box */
+html body .sidebar .user-info,
+html body .sidebar .user-box,
+html body #sidebar .user-box {
+  background: rgba(0, 201, 255, 0.12) !important;
+  border-radius: 12px !important;
+  border: 1px solid rgba(0, 201, 255, 0.25) !important;
+}
+
+/* Keluar button — merah soft */
+html body .sidebar .btn-logout,
+html body .sidebar [data-action="logout"],
+html body #sidebar button:last-child {
+  color: #FCA5A5 !important;
+}
+
+html body .sidebar .btn-logout *,
+html body #sidebar button:last-child * {
+  color: #FCA5A5 !important;
+}
+
+/* Badge counter (angka kuning/orange) */
+html body .sidebar .badge,
+html body #sidebar .badge {
+  background: #FFA726 !important;
+  color: #FFFFFF !important;
+}
 /* ================================================================
    END OF THEME — CORPORATE NAVY
    ================================================================ */
