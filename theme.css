@@ -1,0 +1,464 @@
+/* ================================================================
+   Z-STUNTING · THEME PURPLE (Make Market Inspired)
+   ✅ Override warna global tanpa edit file lain
+   ✅ Tinggal include di index.html
+   ================================================================ */
+
+/* ============ CSS VARIABLES ============ */
+:root {
+  /* Primary — Ungu */
+  --primary: #7C3AED;
+  --primary-dark: #6D28D9;
+  --primary-light: #EDE9FE;
+  --primary-soft: #F5F3FF;
+  --primary-gradient: linear-gradient(135deg, #7C3AED, #A855F7);
+  --primary-gradient-hover: linear-gradient(135deg, #6D28D9, #9333EA);
+  
+  /* Accent — Biru */
+  --accent: #3B82F6;
+  --accent-light: #DBEAFE;
+  --accent-gradient: linear-gradient(135deg, #3B82F6, #6366F1);
+  
+  /* Info / Cyan */
+  --info: #06B6D4;
+  --info-light: #CFFAFE;
+  
+  /* Success */
+  --success: #10B981;
+  --success-light: #D1FAE5;
+  
+  /* Warning */
+  --warning: #F59E0B;
+  --warning-light: #FEF3C7;
+  
+  /* Danger */
+  --danger: #EF4444;
+  --danger-light: #FEE2E2;
+  
+  /* Neumorphism soft colors */
+  --soft-bg: #F8FAFC;
+  --soft-bg-2: #F1F5F9;
+  --soft-text: #1E293B;
+  --soft-text-dim: #64748B;
+  --soft-shadow-1: rgba(124, 58, 237, .12);
+  --soft-shadow-2: rgba(255, 255, 255, .9);
+  
+  /* WA */
+  --wa: #25D366;
+  --wa-dark: #128C7E;
+}
+
+/* ============ BODY & BACKGROUND ============ */
+body {
+  background: linear-gradient(180deg, #F5F3FF 0%, #F8FAFC 100%) !important;
+  color: var(--soft-text) !important;
+}
+
+/* ============ SIDEBAR ============ */
+.sidebar {
+  background: linear-gradient(180deg, #FFFFFF 0%, #F5F3FF 100%) !important;
+  border-right: 1px solid #EDE9FE !important;
+}
+
+.sidebar .brand h1,
+.sidebar .brand-name {
+  color: var(--primary) !important;
+}
+
+/* Nav item default */
+.nav-item {
+  color: var(--soft-text-dim) !important;
+  transition: all .2s ease !important;
+}
+
+.nav-item:hover {
+  background: var(--primary-soft) !important;
+  color: var(--primary) !important;
+}
+
+/* Nav item active */
+.nav-item.active {
+  background: var(--primary-gradient) !important;
+  color: #fff !important;
+  box-shadow: 0 6px 20px var(--soft-shadow-1) !important;
+}
+
+.nav-item.active .ic {
+  color: #fff !important;
+}
+
+/* ============ HEADER / TOPBAR ============ */
+.topbar, .header, header {
+  background: rgba(255, 255, 255, .85) !important;
+  backdrop-filter: blur(10px) !important;
+  border-bottom: 1px solid #EDE9FE !important;
+}
+
+.page-title, #pageTitle {
+  color: var(--soft-text) !important;
+  font-weight: 800 !important;
+}
+
+#pageCrumb, .page-crumb {
+  color: var(--soft-text-dim) !important;
+}
+
+/* ============ CARDS ============ */
+.card {
+  background: #FFFFFF !important;
+  border-radius: 16px !important;
+  box-shadow: 4px 4px 12px rgba(124, 58, 237, .06), -2px -2px 8px rgba(255, 255, 255, .8) !important;
+  border: 1px solid #F1F5F9 !important;
+}
+
+.card-header {
+  border-bottom: 1px solid #F1F5F9 !important;
+}
+
+.card-title {
+  color: var(--soft-text) !important;
+  font-weight: 800 !important;
+}
+
+.card-sub {
+  color: var(--soft-text-dim) !important;
+}
+
+/* ============ BUTTONS ============ */
+.btn {
+  border-radius: 10px !important;
+  font-weight: 700 !important;
+  transition: all .2s ease !important;
+}
+
+/* Primary solid — gradient ungu */
+.btn-primary-solid,
+.btn-primary {
+  background: var(--primary-gradient) !important;
+  color: #fff !important;
+  border: none !important;
+  box-shadow: 0 4px 14px rgba(124, 58, 237, .25) !important;
+}
+
+.btn-primary-solid:hover,
+.btn-primary:hover {
+  background: var(--primary-gradient-hover) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 6px 20px rgba(124, 58, 237, .35) !important;
+}
+
+/* Outline */
+.btn-outline {
+  background: #fff !important;
+  color: var(--soft-text) !important;
+  border: 1.5px solid #E2E8F0 !important;
+}
+
+.btn-outline:hover {
+  background: var(--primary-soft) !important;
+  color: var(--primary) !important;
+  border-color: var(--primary) !important;
+}
+
+/* Info — biru */
+.btn-info {
+  background: var(--accent-gradient) !important;
+  color: #fff !important;
+  border: none !important;
+  box-shadow: 0 4px 14px rgba(59, 130, 246, .25) !important;
+}
+
+.btn-info:hover {
+  filter: brightness(1.1) !important;
+  transform: translateY(-1px) !important;
+}
+
+/* Success */
+.btn-success {
+  background: linear-gradient(135deg, #10B981, #059669) !important;
+  color: #fff !important;
+  border: none !important;
+}
+
+/* Warning */
+.btn-warning {
+  background: linear-gradient(135deg, #F59E0B, #D97706) !important;
+  color: #fff !important;
+  border: none !important;
+}
+
+/* Danger */
+.btn-danger {
+  background: linear-gradient(135deg, #EF4444, #DC2626) !important;
+  color: #fff !important;
+  border: none !important;
+}
+
+/* WA button */
+.btn-wa {
+  background: linear-gradient(135deg, var(--wa), var(--wa-dark)) !important;
+  color: #fff !important;
+  border: none !important;
+  box-shadow: 0 4px 14px rgba(37, 211, 102, .3) !important;
+}
+
+.btn-wa:hover {
+  filter: brightness(1.08) !important;
+  transform: translateY(-1px) !important;
+}
+
+/* ============ STAT CARDS ============ */
+.stat-card {
+  background: #FFFFFF !important;
+  border-radius: 14px !important;
+  border: 1px solid #F1F5F9 !important;
+  box-shadow: 4px 4px 12px rgba(124, 58, 237, .05) !important;
+  transition: all .2s ease !important;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 6px 6px 20px rgba(124, 58, 237, .12) !important;
+}
+
+.stat-card .label {
+  color: var(--soft-text-dim) !important;
+  font-weight: 600 !important;
+}
+
+.stat-card .value {
+  color: var(--soft-text) !important;
+  font-weight: 800 !important;
+}
+
+.stat-card .icon {
+  border-radius: 12px !important;
+}
+
+/* Override icon warna ke ungu sebagai default */
+.stat-card .icon[style*="primary"] {
+  background: var(--primary-light) !important;
+  color: var(--primary) !important;
+}
+
+/* ============ BADGES ============ */
+.badge {
+  border-radius: 6px !important;
+  font-weight: 700 !important;
+  font-size: 11px !important;
+  padding: 3px 8px !important;
+}
+
+.badge-info {
+  background: var(--primary-light) !important;
+  color: var(--primary) !important;
+}
+
+.badge-success {
+  background: var(--success-light) !important;
+  color: #059669 !important;
+}
+
+.badge-warning {
+  background: var(--warning-light) !important;
+  color: #B45309 !important;
+}
+
+.badge-danger {
+  background: var(--danger-light) !important;
+  color: #DC2626 !important;
+}
+
+/* Status gizi badges */
+.badge-stunting, .badge[style*="dc2626"], .badge[style*="ef4444"] {
+  background: var(--danger-light) !important;
+  color: #DC2626 !important;
+}
+
+.badge-gizi-kurang, .badge[style*="f59e0b"], .badge[style*="d97706"] {
+  background: var(--warning-light) !important;
+  color: #B45309 !important;
+}
+
+.badge-gizi-buruk {
+  background: #FEE2E2 !important;
+  color: #991B1B !important;
+}
+
+.badge-ideal, .badge[style*="16a34a"], .badge[style*="059669"] {
+  background: var(--success-light) !important;
+  color: #059669 !important;
+}
+
+/* ============ FORMS ============ */
+input[type="text"],
+input[type="date"],
+input[type="number"],
+input[type="email"],
+input[type="password"],
+textarea,
+select {
+  border: 1.5px solid #E2E8F0 !important;
+  border-radius: 10px !important;
+  background: #fff !important;
+  color: var(--soft-text) !important;
+  transition: all .2s ease !important;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 3px var(--primary-light) !important;
+  outline: none !important;
+}
+
+label {
+  color: var(--soft-text) !important;
+  font-weight: 700 !important;
+}
+
+/* ============ TABLES ============ */
+table {
+  border-collapse: separate !important;
+  border-spacing: 0 !important;
+}
+
+thead th {
+  background: linear-gradient(135deg, #F5F3FF, #EDE9FE) !important;
+  color: var(--primary) !important;
+  font-weight: 800 !important;
+  border-bottom: 2px solid #DDD6FE !important;
+  font-size: 12px !important;
+  text-transform: uppercase !important;
+  letter-spacing: .3px !important;
+}
+
+tbody tr {
+  transition: background .15s ease !important;
+}
+
+tbody tr:hover {
+  background: var(--primary-soft) !important;
+}
+
+tbody td {
+  border-bottom: 1px solid #F1F5F9 !important;
+  color: var(--soft-text) !important;
+}
+
+/* ============ MODAL ============ */
+.modal-content,
+#modalConfirm > div {
+  border-radius: 18px !important;
+  overflow: hidden !important;
+  box-shadow: 0 25px 60px rgba(124, 58, 237, .25) !important;
+}
+
+.modal-header,
+#modalConfirm h3 {
+  background: var(--primary-gradient) !important;
+  color: #fff !important;
+}
+
+/* ============ FILTERS ============ */
+.filters {
+  background: #F8FAFC !important;
+  border-radius: 12px !important;
+  padding: 10px !important;
+  border: 1px solid #F1F5F9 !important;
+}
+
+/* ============ SCROLLBAR (Chrome/Safari) ============ */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #F1F5F9;
+  border-radius: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #A855F7, #7C3AED);
+  border-radius: 8px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #9333EA, #6D28D9);
+}
+
+/* ============ TOAST / NOTIFIKASI ============ */
+.toast,
+#toast {
+  border-radius: 12px !important;
+  font-weight: 700 !important;
+  box-shadow: 0 10px 30px rgba(124, 58, 237, .3) !important;
+}
+
+/* ============ SPLASH SCREEN ============ */
+.splash,
+#splash {
+  background: var(--primary-gradient) !important;
+}
+
+/* ============ KALENDER JADWAL ============ */
+/* Hari ini — tetap kuning biar kontras */
+[style*="linear-gradient(135deg,#fef3c7,#fde68a)"],
+[style*="linear-gradient(135deg, #fef3c7, #fde68a)"] {
+  /* override sedikit lebih warm */
+  background: linear-gradient(135deg, #FEF3C7, #FDE68A) !important;
+}
+
+/* Ada jadwal — ubah dari biru ke ungu */
+[style*="linear-gradient(135deg,#e0f2fe,#bae6fd)"],
+[style*="linear-gradient(135deg, #e0f2fe, #bae6fd)"] {
+  background: linear-gradient(135deg, #EDE9FE, #DDD6FE) !important;
+}
+
+/* ============ LINK ============ */
+a {
+  color: var(--primary) !important;
+}
+
+a:hover {
+  color: var(--primary-dark) !important;
+}
+
+/* ============ ICON WRAPPER di sidebar ============ */
+.sidebar .logo img,
+.sidebar .logo {
+  filter: hue-rotate(240deg) saturate(1.2) !important;
+}
+
+/* ============ HIGHLIGHT / SELECTION ============ */
+::selection {
+  background: var(--primary-light);
+  color: var(--primary-dark);
+}
+
+/* ============ DARK MODE (opsional, kalau user aktifkan dark mode) ============ */
+@media (prefers-color-scheme: dark) {
+  /* Biarkan default — mode terang tetap aktif */
+}
+
+/* ============ RESPONSIVE TUNING ============ */
+@media (max-width: 640px) {
+  .card {
+    border-radius: 14px !important;
+  }
+  
+  .btn {
+    font-size: 12px !important;
+    padding: 8px 12px !important;
+  }
+  
+  .stat-card .value {
+    font-size: 22px !important;
+  }
+}
+
+/* ================================================================
+   END OF THEME
+   ================================================================ */
