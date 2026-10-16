@@ -1,157 +1,280 @@
 /* ================================================================
-   Z-STUNTING · THEME PURPLE (Make Market Inspired)
-   ✅ Override warna global tanpa edit file lain
-   ✅ Tinggal include di index.html
+   Z-STUNTING · THEME CORPORATE NAVY
+   Inspired by: Company Profile Brochure Design
+   ✅ Navy deep + Cyan accent + Orange highlight
+   ✅ Clean corporate look, cocok untuk aplikasi pemerintahan
    ================================================================ */
 
-/* ============ CSS VARIABLES ============ */
+/* ============ IMPORT FONT MODERN ============ */
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap');
+
+/* ============ ROOT VARIABLES ============ */
 :root {
-  /* Primary — Ungu */
-  --primary: #7C3AED;
-  --primary-dark: #6D28D9;
-  --primary-light: #EDE9FE;
-  --primary-soft: #F5F3FF;
-  --primary-gradient: linear-gradient(135deg, #7C3AED, #A855F7);
-  --primary-gradient-hover: linear-gradient(135deg, #6D28D9, #9333EA);
+  /* PRIMARY — Navy */
+  --primary: #1E2A78;
+  --primary-dark: #151F5C;
+  --primary-light: #E8EBF7;
+  --primary-soft: #F0F2FA;
+  --primary-gradient: linear-gradient(135deg, #1E2A78, #3B4CA8);
+  --primary-gradient-hover: linear-gradient(135deg, #151F5C, #2A3A8C);
   
-  /* Accent — Biru */
-  --accent: #3B82F6;
-  --accent-light: #DBEAFE;
-  --accent-gradient: linear-gradient(135deg, #3B82F6, #6366F1);
+  /* ACCENT — Cyan */
+  --accent: #00C9FF;
+  --accent-dark: #00A3D9;
+  --accent-light: #E0F7FF;
+  --accent-gradient: linear-gradient(135deg, #00C9FF, #0091EA);
   
-  /* Info / Cyan */
-  --info: #06B6D4;
-  --info-light: #CFFAFE;
+  /* HIGHLIGHT — Orange */
+  --highlight: #FFA726;
+  --highlight-dark: #F57C00;
+  --highlight-light: #FFF4E0;
   
-  /* Success */
+  /* STATUS */
   --success: #10B981;
   --success-light: #D1FAE5;
-  
-  /* Warning */
-  --warning: #F59E0B;
-  --warning-light: #FEF3C7;
-  
-  /* Danger */
+  --warning: #FFA726;
+  --warning-light: #FFF4E0;
   --danger: #EF4444;
   --danger-light: #FEE2E2;
+  --info: #00C9FF;
+  --info-light: #E0F7FF;
   
-  /* Neumorphism soft colors */
-  --soft-bg: #F8FAFC;
-  --soft-bg-2: #F1F5F9;
-  --soft-text: #1E293B;
-  --soft-text-dim: #64748B;
-  --soft-shadow-1: rgba(124, 58, 237, .12);
+  /* NEUMORPHISM SOFT */
+  --soft-bg: #F5F7FA;
+  --soft-bg-2: #EEF1F7;
+  --soft-text: #1A1A2E;
+  --soft-text-dim: #6B7280;
+  --soft-shadow-1: rgba(30, 42, 120, .12);
   --soft-shadow-2: rgba(255, 255, 255, .9);
   
-  /* WA */
+  /* WhatsApp */
   --wa: #25D366;
   --wa-dark: #128C7E;
+  
+  /* FONT */
+  --font-display: 'Montserrat', -apple-system, sans-serif;
+  --font-body: 'Inter', -apple-system, sans-serif;
+}
+
+/* ============ GLOBAL FONT ============ */
+body, input, textarea, select, button {
+  font-family: var(--font-body) !important;
+}
+
+h1, h2, h3, h4, h5, h6,
+.card-title, .page-title, #pageTitle, .brand-name, .brand h1 {
+  font-family: var(--font-display) !important;
+  letter-spacing: -.3px !important;
 }
 
 /* ============ BODY & BACKGROUND ============ */
 body {
-  background: linear-gradient(180deg, #F5F3FF 0%, #F8FAFC 100%) !important;
+  background: 
+    radial-gradient(circle at 0% 0%, rgba(30, 42, 120, .04) 0%, transparent 40%),
+    radial-gradient(circle at 100% 100%, rgba(0, 201, 255, .04) 0%, transparent 40%),
+    #F5F7FA !important;
   color: var(--soft-text) !important;
+  -webkit-font-smoothing: antialiased;
 }
 
 /* ============ SIDEBAR ============ */
 .sidebar {
-  background: linear-gradient(180deg, #FFFFFF 0%, #F5F3FF 100%) !important;
-  border-right: 1px solid #EDE9FE !important;
+  background: linear-gradient(180deg, #1E2A78 0%, #151F5C 100%) !important;
+  border-right: none !important;
+  box-shadow: 4px 0 20px rgba(30, 42, 120, .15) !important;
 }
 
 .sidebar .brand h1,
 .sidebar .brand-name {
-  color: var(--primary) !important;
+  color: #FFFFFF !important;
+  font-weight: 800 !important;
 }
 
-/* Nav item default */
-.nav-item {
-  color: var(--soft-text-dim) !important;
+/* Nav item default — sidebar putih tulisan */
+.sidebar .nav-item,
+.sidebar .user-info .name,
+.sidebar .user-info .role {
+  color: rgba(255, 255, 255, .75) !important;
   transition: all .2s ease !important;
+  border-radius: 10px !important;
+  margin-bottom: 2px !important;
 }
 
-.nav-item:hover {
-  background: var(--primary-soft) !important;
-  color: var(--primary) !important;
+.sidebar .nav-item:hover {
+  background: rgba(0, 201, 255, .15) !important;
+  color: #FFFFFF !important;
+  transform: translateX(2px) !important;
 }
 
-/* Nav item active */
-.nav-item.active {
-  background: var(--primary-gradient) !important;
+.sidebar .nav-item.active {
+  background: linear-gradient(135deg, #00C9FF, #0091EA) !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 6px 20px rgba(0, 201, 255, .35) !important;
+  font-weight: 700 !important;
+}
+
+.sidebar .nav-item.active .ic {
+  color: #FFFFFF !important;
+}
+
+/* Section title di sidebar */
+.sidebar .section-title,
+.sidebar .nav-section {
+  color: rgba(255, 255, 255, .4) !important;
+  letter-spacing: 1.5px !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+}
+
+/* Badge counter di sidebar */
+.sidebar .nav-item .badge,
+.sidebar .badge-count {
+  background: #FFA726 !important;
   color: #fff !important;
-  box-shadow: 0 6px 20px var(--soft-shadow-1) !important;
+  font-weight: 800 !important;
 }
 
-.nav-item.active .ic {
+/* User info box di sidebar */
+.sidebar .user-info,
+.sidebar .user-box {
+  background: rgba(0, 201, 255, .12) !important;
+  border-radius: 12px !important;
+  padding: 10px 12px !important;
+  margin: 8px !important;
+  border: 1px solid rgba(0, 201, 255, .2) !important;
+}
+
+.sidebar .user-info .ic,
+.sidebar .avatar {
+  background: linear-gradient(135deg, #00C9FF, #0091EA) !important;
+  color: #fff !important;
+}
+
+/* Keluar button */
+.sidebar .btn-logout,
+.sidebar [data-action="logout"] {
+  background: rgba(239, 68, 68, .15) !important;
+  color: #FCA5A5 !important;
+  border: 1px solid rgba(239, 68, 68, .3) !important;
+  border-radius: 10px !important;
+}
+
+.sidebar .btn-logout:hover,
+.sidebar [data-action="logout"]:hover {
+  background: rgba(239, 68, 68, .3) !important;
   color: #fff !important;
 }
 
 /* ============ HEADER / TOPBAR ============ */
 .topbar, .header, header {
-  background: rgba(255, 255, 255, .85) !important;
+  background: #FFFFFF !important;
   backdrop-filter: blur(10px) !important;
-  border-bottom: 1px solid #EDE9FE !important;
+  border-bottom: 1px solid #E5E9F2 !important;
+  box-shadow: 0 1px 3px rgba(30, 42, 120, .04) !important;
 }
 
 .page-title, #pageTitle {
   color: var(--soft-text) !important;
   font-weight: 800 !important;
+  font-size: 20px !important;
 }
 
 #pageCrumb, .page-crumb {
   color: var(--soft-text-dim) !important;
+  font-size: 12.5px !important;
+}
+
+/* Cloud indicator */
+.cloud-indicator, .cloud-status {
+  background: var(--success-light) !important;
+  color: #047857 !important;
+  font-weight: 700 !important;
+  border-radius: 20px !important;
+  padding: 4px 12px !important;
+  font-size: 11px !important;
 }
 
 /* ============ CARDS ============ */
 .card {
   background: #FFFFFF !important;
   border-radius: 16px !important;
-  box-shadow: 4px 4px 12px rgba(124, 58, 237, .06), -2px -2px 8px rgba(255, 255, 255, .8) !important;
-  border: 1px solid #F1F5F9 !important;
+  box-shadow: 
+    0 1px 3px rgba(30, 42, 120, .06),
+    0 4px 12px rgba(30, 42, 120, .04) !important;
+  border: 1px solid #E5E9F2 !important;
+  overflow: hidden !important;
+  transition: all .2s ease !important;
 }
 
+.card:hover {
+  box-shadow: 
+    0 4px 8px rgba(30, 42, 120, .08),
+    0 12px 28px rgba(30, 42, 120, .08) !important;
+}
+
+/* Card header — bergaya seperti brochure */
 .card-header {
-  border-bottom: 1px solid #F1F5F9 !important;
+  background: linear-gradient(135deg, #F0F2FA 0%, #FFFFFF 100%) !important;
+  border-bottom: 1px solid #E5E9F2 !important;
+  padding: 16px 20px !important;
+  position: relative !important;
+}
+
+/* Aksen garis cyan di kiri card-header */
+.card-header::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: linear-gradient(180deg, #00C9FF, #1E2A78) !important;
 }
 
 .card-title {
-  color: var(--soft-text) !important;
+  color: var(--primary) !important;
   font-weight: 800 !important;
+  font-size: 16px !important;
+  letter-spacing: -.2px !important;
 }
 
 .card-sub {
   color: var(--soft-text-dim) !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
 }
 
 /* ============ BUTTONS ============ */
 .btn {
   border-radius: 10px !important;
   font-weight: 700 !important;
+  font-family: var(--font-display) !important;
   transition: all .2s ease !important;
+  letter-spacing: .2px !important;
+  font-size: 13px !important;
 }
 
-/* Primary solid — gradient ungu */
+/* Primary — navy gradient */
 .btn-primary-solid,
 .btn-primary {
   background: var(--primary-gradient) !important;
   color: #fff !important;
   border: none !important;
-  box-shadow: 0 4px 14px rgba(124, 58, 237, .25) !important;
+  box-shadow: 0 4px 14px rgba(30, 42, 120, .25) !important;
 }
 
 .btn-primary-solid:hover,
 .btn-primary:hover {
   background: var(--primary-gradient-hover) !important;
   transform: translateY(-1px) !important;
-  box-shadow: 0 6px 20px rgba(124, 58, 237, .35) !important;
+  box-shadow: 0 6px 20px rgba(30, 42, 120, .35) !important;
 }
 
 /* Outline */
 .btn-outline {
   background: #fff !important;
-  color: var(--soft-text) !important;
-  border: 1.5px solid #E2E8F0 !important;
+  color: var(--primary) !important;
+  border: 1.5px solid #E5E9F2 !important;
 }
 
 .btn-outline:hover {
@@ -160,17 +283,18 @@ body {
   border-color: var(--primary) !important;
 }
 
-/* Info — biru */
+/* Info — cyan */
 .btn-info {
-  background: var(--accent-gradient) !important;
+  background: linear-gradient(135deg, #00C9FF, #0091EA) !important;
   color: #fff !important;
   border: none !important;
-  box-shadow: 0 4px 14px rgba(59, 130, 246, .25) !important;
+  box-shadow: 0 4px 14px rgba(0, 201, 255, .3) !important;
 }
 
 .btn-info:hover {
-  filter: brightness(1.1) !important;
+  filter: brightness(1.08) !important;
   transform: translateY(-1px) !important;
+  box-shadow: 0 6px 20px rgba(0, 201, 255, .4) !important;
 }
 
 /* Success */
@@ -178,13 +302,15 @@ body {
   background: linear-gradient(135deg, #10B981, #059669) !important;
   color: #fff !important;
   border: none !important;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, .25) !important;
 }
 
-/* Warning */
+/* Warning — orange */
 .btn-warning {
-  background: linear-gradient(135deg, #F59E0B, #D97706) !important;
+  background: linear-gradient(135deg, #FFA726, #F57C00) !important;
   color: #fff !important;
   border: none !important;
+  box-shadow: 0 4px 14px rgba(255, 167, 38, .3) !important;
 }
 
 /* Danger */
@@ -192,6 +318,7 @@ body {
   background: linear-gradient(135deg, #EF4444, #DC2626) !important;
   color: #fff !important;
   border: none !important;
+  box-shadow: 0 4px 14px rgba(239, 68, 68, .25) !important;
 }
 
 /* WA button */
@@ -211,83 +338,134 @@ body {
 .stat-card {
   background: #FFFFFF !important;
   border-radius: 14px !important;
-  border: 1px solid #F1F5F9 !important;
-  box-shadow: 4px 4px 12px rgba(124, 58, 237, .05) !important;
-  transition: all .2s ease !important;
+  border: 1px solid #E5E9F2 !important;
+  padding: 16px !important;
+  box-shadow: 0 1px 3px rgba(30, 42, 120, .05) !important;
+  transition: all .25s ease !important;
+  position: relative !important;
+  overflow: hidden !important;
+}
+
+/* Aksen kecil di pojok kanan atas */
+.stat-card::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, transparent 50%, rgba(0, 201, 255, .08) 50%) !important;
+  border-bottom-left-radius: 100% !important;
 }
 
 .stat-card:hover {
-  transform: translateY(-2px) !important;
-  box-shadow: 6px 6px 20px rgba(124, 58, 237, .12) !important;
+  transform: translateY(-3px) !important;
+  box-shadow: 0 8px 24px rgba(30, 42, 120, .12) !important;
+  border-color: rgba(0, 201, 255, .3) !important;
 }
 
 .stat-card .label {
   color: var(--soft-text-dim) !important;
   font-weight: 600 !important;
+  font-size: 11px !important;
+  text-transform: uppercase !important;
+  letter-spacing: .8px !important;
 }
 
 .stat-card .value {
-  color: var(--soft-text) !important;
-  font-weight: 800 !important;
+  color: var(--primary) !important;
+  font-weight: 900 !important;
+  font-family: var(--font-display) !important;
+  font-size: 26px !important;
+  line-height: 1.1 !important;
 }
 
+/* Icon kotak di stat card */
 .stat-card .icon {
   border-radius: 12px !important;
-}
-
-/* Override icon warna ke ungu sebagai default */
-.stat-card .icon[style*="primary"] {
+  width: 42px !important;
+  height: 42px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 20px !important;
   background: var(--primary-light) !important;
   color: var(--primary) !important;
+}
+
+/* Icon kuning untuk warning */
+.stat-card .icon[style*="warning"],
+.stat-card .icon[style*="f59e0b"],
+.stat-card .icon[style*="FFA726"] {
+  background: var(--highlight-light) !important;
+  color: var(--highlight-dark) !important;
+}
+
+/* Icon hijau untuk success */
+.stat-card .icon[style*="success"],
+.stat-card .icon[style*="10b981"] {
+  background: var(--success-light) !important;
+  color: #047857 !important;
+}
+
+/* Icon merah danger */
+.stat-card .icon[style*="danger"],
+.stat-card .icon[style*="ef4444"] {
+  background: var(--danger-light) !important;
+  color: #DC2626 !important;
 }
 
 /* ============ BADGES ============ */
 .badge {
   border-radius: 6px !important;
-  font-weight: 700 !important;
-  font-size: 11px !important;
-  padding: 3px 8px !important;
+  font-weight: 800 !important;
+  font-size: 10.5px !important;
+  padding: 4px 10px !important;
+  letter-spacing: .3px !important;
+  text-transform: uppercase !important;
+  font-family: var(--font-display) !important;
 }
 
-.badge-info {
+.badge-info, .badge-primary {
   background: var(--primary-light) !important;
   color: var(--primary) !important;
 }
 
 .badge-success {
   background: var(--success-light) !important;
-  color: #059669 !important;
+  color: #047857 !important;
 }
 
 .badge-warning {
-  background: var(--warning-light) !important;
+  background: var(--highlight-light) !important;
   color: #B45309 !important;
 }
 
 .badge-danger {
   background: var(--danger-light) !important;
-  color: #DC2626 !important;
+  color: #B91C1C !important;
 }
 
-/* Status gizi badges */
-.badge-stunting, .badge[style*="dc2626"], .badge[style*="ef4444"] {
-  background: var(--danger-light) !important;
-  color: #DC2626 !important;
+/* Status gizi — tetap jelas */
+.badge[style*="Stunting"],
+.badge-stunting {
+  background: #FEE2E2 !important;
+  color: #B91C1C !important;
 }
 
-.badge-gizi-kurang, .badge[style*="f59e0b"], .badge[style*="d97706"] {
-  background: var(--warning-light) !important;
+.badge[style*="Gizi Kurang"] {
+  background: #FFF4E0 !important;
   color: #B45309 !important;
 }
 
-.badge-gizi-buruk {
-  background: #FEE2E2 !important;
-  color: #991B1B !important;
+.badge[style*="Gizi Buruk"] {
+  background: #FCE7F3 !important;
+  color: #9D174D !important;
 }
 
-.badge-ideal, .badge[style*="16a34a"], .badge[style*="059669"] {
+.badge[style*="Ideal"] {
   background: var(--success-light) !important;
-  color: #059669 !important;
+  color: #047857 !important;
 }
 
 /* ============ FORMS ============ */
@@ -296,55 +474,112 @@ input[type="date"],
 input[type="number"],
 input[type="email"],
 input[type="password"],
+input[type="search"],
 textarea,
 select {
-  border: 1.5px solid #E2E8F0 !important;
+  border: 1.5px solid #E5E9F2 !important;
   border-radius: 10px !important;
-  background: #fff !important;
+  background: #FFFFFF !important;
   color: var(--soft-text) !important;
   transition: all .2s ease !important;
+  font-family: var(--font-body) !important;
+  font-size: 13.5px !important;
+  padding: 10px 14px !important;
+}
+
+input::placeholder, textarea::placeholder {
+  color: #A0AEC0 !important;
 }
 
 input:focus,
 textarea:focus,
 select:focus {
-  border-color: var(--primary) !important;
-  box-shadow: 0 0 0 3px var(--primary-light) !important;
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 3px var(--accent-light) !important;
   outline: none !important;
+  background: #FFFFFF !important;
 }
 
 label {
-  color: var(--soft-text) !important;
+  color: var(--primary) !important;
   font-weight: 700 !important;
+  font-family: var(--font-display) !important;
+  font-size: 12.5px !important;
+  letter-spacing: .2px !important;
+}
+
+/* ============ FILTERS BAR ============ */
+.filters {
+  background: linear-gradient(135deg, #F0F2FA 0%, #FFFFFF 100%) !important;
+  border-radius: 14px !important;
+  padding: 12px !important;
+  border: 1px solid #E5E9F2 !important;
+  display: flex !important;
+  gap: 8px !important;
+  flex-wrap: wrap !important;
+  margin-bottom: 14px !important;
 }
 
 /* ============ TABLES ============ */
+.table-wrap {
+  border-radius: 12px !important;
+  overflow: hidden !important;
+  border: 1px solid #E5E9F2 !important;
+  background: #fff !important;
+}
+
 table {
   border-collapse: separate !important;
   border-spacing: 0 !important;
+  width: 100% !important;
 }
 
 thead th {
-  background: linear-gradient(135deg, #F5F3FF, #EDE9FE) !important;
-  color: var(--primary) !important;
+  background: linear-gradient(135deg, #1E2A78, #2A3A8C) !important;
+  color: #FFFFFF !important;
   font-weight: 800 !important;
-  border-bottom: 2px solid #DDD6FE !important;
-  font-size: 12px !important;
+  border-bottom: none !important;
+  font-size: 11px !important;
   text-transform: uppercase !important;
-  letter-spacing: .3px !important;
+  letter-spacing: .8px !important;
+  font-family: var(--font-display) !important;
+  padding: 14px 12px !important;
+  white-space: nowrap !important;
+}
+
+thead th:first-child {
+  border-top-left-radius: 10px !important;
+}
+
+thead th:last-child {
+  border-top-right-radius: 10px !important;
 }
 
 tbody tr {
   transition: background .15s ease !important;
+  border-bottom: 1px solid #F0F2FA !important;
+}
+
+tbody tr:nth-child(even) {
+  background: #FAFBFD !important;
 }
 
 tbody tr:hover {
-  background: var(--primary-soft) !important;
+  background: var(--accent-light) !important;
 }
 
 tbody td {
-  border-bottom: 1px solid #F1F5F9 !important;
+  border-bottom: 1px solid #F0F2FA !important;
   color: var(--soft-text) !important;
+  padding: 12px !important;
+  font-size: 13px !important;
+  vertical-align: middle !important;
+}
+
+/* Nama/NIK cell bold */
+tbody td b {
+  color: var(--primary) !important;
+  font-weight: 700 !important;
 }
 
 /* ============ MODAL ============ */
@@ -352,98 +587,146 @@ tbody td {
 #modalConfirm > div {
   border-radius: 18px !important;
   overflow: hidden !important;
-  box-shadow: 0 25px 60px rgba(124, 58, 237, .25) !important;
+  box-shadow: 0 25px 60px rgba(30, 42, 120, .25) !important;
 }
 
 .modal-header,
-#modalConfirm h3 {
-  background: var(--primary-gradient) !important;
-  color: #fff !important;
+#modalConfirm > div > div:first-child {
+  background: linear-gradient(135deg, #1E2A78, #2A3A8C) !important;
+  color: #FFFFFF !important;
 }
 
-/* ============ FILTERS ============ */
-.filters {
-  background: #F8FAFC !important;
-  border-radius: 12px !important;
-  padding: 10px !important;
-  border: 1px solid #F1F5F9 !important;
+.modal-header h3,
+#modalConfirm h3,
+#confirmTitle {
+  color: #FFFFFF !important;
+  font-weight: 800 !important;
+  font-family: var(--font-display) !important;
+  letter-spacing: -.2px !important;
 }
 
-/* ============ SCROLLBAR (Chrome/Safari) ============ */
+/* Modal footer button area */
+.modal-footer,
+#modalConfirm > div > div:last-child {
+  background: #F5F7FA !important;
+  border-top: 1px solid #E5E9F2 !important;
+}
+
+/* ============ SCROLLBAR ============ */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #F1F5F9;
+  background: #F0F2FA;
   border-radius: 8px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, #A855F7, #7C3AED);
+  background: linear-gradient(180deg, #3B4CA8, #1E2A78);
   border-radius: 8px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, #9333EA, #6D28D9);
+  background: linear-gradient(180deg, #1E2A78, #151F5C);
 }
 
-/* ============ TOAST / NOTIFIKASI ============ */
-.toast,
-#toast {
+/* ============ TOAST ============ */
+.toast, #toast {
   border-radius: 12px !important;
   font-weight: 700 !important;
-  box-shadow: 0 10px 30px rgba(124, 58, 237, .3) !important;
+  font-family: var(--font-display) !important;
+  box-shadow: 0 10px 30px rgba(30, 42, 120, .25) !important;
 }
 
 /* ============ SPLASH SCREEN ============ */
-.splash,
-#splash {
-  background: var(--primary-gradient) !important;
+.splash, #splash {
+  background: linear-gradient(135deg, #1E2A78 0%, #151F5C 100%) !important;
+}
+
+/* Splash text */
+.splash h1, #splash h1, .splash-title {
+  color: #FFFFFF !important;
+  letter-spacing: -.5px !important;
 }
 
 /* ============ KALENDER JADWAL ============ */
-/* Hari ini — tetap kuning biar kontras */
+/* Hari ini — orange (kontras dengan navy) */
 [style*="linear-gradient(135deg,#fef3c7,#fde68a)"],
 [style*="linear-gradient(135deg, #fef3c7, #fde68a)"] {
-  /* override sedikit lebih warm */
-  background: linear-gradient(135deg, #FEF3C7, #FDE68A) !important;
+  background: linear-gradient(135deg, #FFF4E0, #FFE0B2) !important;
+  border: 2px solid #FFA726 !important;
 }
 
-/* Ada jadwal — ubah dari biru ke ungu */
+/* Ada jadwal — cyan soft */
 [style*="linear-gradient(135deg,#e0f2fe,#bae6fd)"],
 [style*="linear-gradient(135deg, #e0f2fe, #bae6fd)"] {
-  background: linear-gradient(135deg, #EDE9FE, #DDD6FE) !important;
+  background: linear-gradient(135deg, #E0F7FF, #B3EBFF) !important;
+  border: 2px solid #00C9FF !important;
+}
+
+/* Nama posyandu di kalender */
+[style*="color:#0369a1"],
+[style*="color: #0369a1"] {
+  color: var(--primary) !important;
+  font-weight: 700 !important;
 }
 
 /* ============ LINK ============ */
 a {
   color: var(--primary) !important;
+  text-decoration: none !important;
 }
 
 a:hover {
-  color: var(--primary-dark) !important;
+  color: var(--accent-dark) !important;
 }
 
-/* ============ ICON WRAPPER di sidebar ============ */
-.sidebar .logo img,
-.sidebar .logo {
-  filter: hue-rotate(240deg) saturate(1.2) !important;
-}
-
-/* ============ HIGHLIGHT / SELECTION ============ */
+/* ============ SELECTION ============ */
 ::selection {
-  background: var(--primary-light);
+  background: var(--accent-light);
   color: var(--primary-dark);
 }
 
-/* ============ DARK MODE (opsional, kalau user aktifkan dark mode) ============ */
-@media (prefers-color-scheme: dark) {
-  /* Biarkan default — mode terang tetap aktif */
+/* ============ HIGHLIGHT ANGKA PENTING ============ */
+.highlight-number,
+.value-big {
+  color: var(--highlight) !important;
+  font-weight: 900 !important;
 }
 
-/* ============ RESPONSIVE TUNING ============ */
+/* ============ HEADER SECTION (seperti brochure) ============ */
+/* Section title dengan garis bawah cyan */
+.section-title-brochure {
+  color: var(--primary) !important;
+  font-weight: 900 !important;
+  font-family: var(--font-display) !important;
+  font-size: 20px !important;
+  position: relative !important;
+  padding-bottom: 8px !important;
+}
+
+.section-title-brochure::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 50px;
+  height: 3px;
+  background: linear-gradient(90deg, #00C9FF, #1E2A78) !important;
+  border-radius: 3px !important;
+}
+
+/* ============ DIVIDER GARIS ============ */
+hr, .divider {
+  border: none !important;
+  height: 1px !important;
+  background: linear-gradient(90deg, transparent, #E5E9F2, transparent) !important;
+  margin: 16px 0 !important;
+}
+
+/* ============ RESPONSIVE ============ */
 @media (max-width: 640px) {
   .card {
     border-radius: 14px !important;
@@ -457,8 +740,42 @@ a:hover {
   .stat-card .value {
     font-size: 22px !important;
   }
+  
+  .card-title {
+    font-size: 15px !important;
+  }
+  
+  thead th {
+    font-size: 10px !important;
+    padding: 10px 8px !important;
+  }
+  
+  tbody td {
+    font-size: 12px !important;
+    padding: 10px 8px !important;
+  }
+  
+  .page-title, #pageTitle {
+    font-size: 17px !important;
+  }
+}
+
+/* ============ PRINT STYLE ============ */
+@media print {
+  .sidebar, .btn, .topbar, .header {
+    display: none !important;
+  }
+  
+  body {
+    background: #fff !important;
+  }
+  
+  .card {
+    box-shadow: none !important;
+    border: 1px solid #E5E9F2 !important;
+  }
 }
 
 /* ================================================================
-   END OF THEME
+   END OF THEME — CORPORATE NAVY
    ================================================================ */
