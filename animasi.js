@@ -1,27 +1,32 @@
 /* ================================================================
-   Z-STUNTING · ANIMASI SLIDE/PUSH v4 (ULTRA SMOOTH)
-   ✅ 1 fase animasi — tidak ada kedip
-   ✅ Konten masuk dari kanan dengan halus
-   ✅ Tidak ada MutationObserver, tidak ada dobel trigger
-   ✅ Ripple + hover tetap ada
+   Z-STUNTING · ANIMASI 2-FASE (PREMIUM SLIDE)
+   Fase 1: Konten lama fade out + slide keluar
+   Fase 2: Konten baru fade in + slide masuk + card stagger
+   ✅ Tidak ada kedip (pakai flag & setTimeout)
+   ✅ Transisi sesuai permintaan: hilang dulu baru muncul
    ================================================================ */
 (function(){
-  console.log('%c✨ Animasi v4 (SLIDE/PUSH) loading...', 'color:#00C9FF;font-weight:bold');
+  console.log('%c✨ Animasi 2-Fase loading...', 'color:#00C9FF;font-weight:bold');
 
   /* ============================================================
      INJECT CSS
      ============================================================ */
   function injectCSS(){
-    if(document.getElementById('_zstSlideStyle')) return;
+    if(document.getElementById('_zstAnimStyle')) return;
     const style = document.createElement('style');
-    style.id = '_zstSlideStyle';
+    style.id = '_zstAnimStyle';
     style.textContent = `
-      /* ============ CONTENT WRAPPER ============ */
+      /* ============ #CONTENT TRANSITION ============ */
       #content {
         will-change: opacity, transform;
       }
       
-      /* ============ CARD HOVER LIFT ============ */
+      /* ============ CARD TRANSITION (untuk stagger) ============ */
+      #content .card {
+        will-change: opacity, transform;
+      }
+      
+      /* ============ STAT CARD HOVER ============ */
       .stat-card {
         transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
                     box-shadow 0.25s ease !important;
@@ -36,7 +41,7 @@
         transform: translateY(-1px) scale(0.99) !important;
       }
       
-      /* ============ CARD HOVER (umum) ============ */
+      /* ============ CARD HOVER ============ */
       .card {
         transition: box-shadow 0.25s ease !important;
       }
@@ -89,12 +94,121 @@
       
       /* ============ ACCESSIBILITY ============ */
       @media (prefers-reduced-motion: reduce) {
-        #content { transition: none !important; }
-        .stat-card, .btn, .nav-item { transition: none !important; }
+        #content, #content .card, .stat-card, .btn, .nav-item {
+          transition-duration: 0.01ms !important;
+        }
       }
     `;
     document.head.appendChild(style);
-    console.log('✅ CSS v4 terpasang');
+    console.log('✅ CSS terpasang');
+  }
+
+  /* ============================================================
+     TRANSISI 2-FASE UTAMA
+     ============================================================ */
+  function doTransition(renderFn){
+    const content = document.getElementById('content');
+    if(!content){
+      if(renderFn) renderFn();
+      return;
+    }
+    
+    // Cegah double-trigger (kalau user klik cepat)
+    if(content._zstAnimating){
+      // Kalau sedang animasi, langsung render tanpa animasi
+      if(renderFn) renderFn();
+      return;
+    }
+    content._zstAnimating = true;
+    
+    // ============================================================
+    // FASE 1: Konten lama fade out + slide keluar ke kiri
+    // ============================================================
+    content.style.transition = 'opacity 0.22s ease, transform 0.25s cubic-bezier(0.4, 0, 1, 1)';
+    content.style.opacity = '0';
+    content.style.transform = 'translateX(-25px) scale(0.98)';
+    
+    // Tunggu fase 1 selesai (250ms)
+    setTimeout(() => {
+      // ============================================================
+      // STEP TENGAH: Siapkan posisi awal untuk konten baru (dari kanan)
+      // ============================================================
+      content.style.transition = 'none';
+      content.style.opacity = '0';
+      content.style.transform = 'translateX(30px) scale(0.98)';
+      
+      // Render konten baru (masih invisible)
+      if(renderFn){
+        try { renderFn(); }
+        catch(e){ console.warn('render error:', e); }
+      }
+      
+      // Paksa browser render dulu sebelum animasi masuk
+      void content.offsetHeight;
+      
+      // Siapkan card dalam konten baru untuk stagger
+      const cards = content.querySelectorAll('.card');
+      cards.forEach((card, i) => {
+        if(i > 4) return;
+        card.style.transition = 'none';
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(15px)';
+      });
+      
+      // ============================================================
+      // FASE 2: Konten baru fade in + slide masuk dari kanan
+      // ============================================================
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          // Animasi #content utama
+          content.style.transition = 'opacity 0.35s ease, transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)';
+          content.style.opacity = '1';
+          content.style.transform = 'translateX(0) scale(1)';
+          
+          // Animasi card stagger
+          setTimeout(() => {
+            cards.forEach((card, i) => {
+              if(i > 4) return;
+              card.style.transition = `opacity 0.4s ease ${i * 0.06}s, transform 0.45s cubic-bezier(0.16, 1, 0.3, 1) ${i * 0.06}s`;
+              card.style.opacity = '1';
+              card.style.transform = 'translateY(0)';
+            });
+          }, 50);
+          
+          // ============================================================
+          // CLEANUP setelah semua selesai
+          // ============================================================
+          setTimeout(() => {
+            content.style.transition = '';
+            content.style.transform = '';
+            content.style.opacity = '';
+            cards.forEach(card => {
+              card.style.transition = '';
+              card.style.transform = '';
+              card.style.opacity = '';
+            });
+            content._zstAnimating = false;
+          }, 700);
+        });
+      });
+    }, 260);
+  }
+
+  /* ============================================================
+     HOOK showView() — OVERRIDE FUNGSI UTAMA
+     ============================================================ */
+  function hookShowView(){
+    if(!window.showView || window._zstShowViewHooked) return;
+    window._zstShowViewHooked = true;
+    
+    const orig = window.showView;
+    window.showView = function(view, btn){
+      // Jalankan transisi 2-fase
+      doTransition(() => {
+        orig.call(this, view, btn);
+      });
+    };
+    console.log('✅ showView di-hook untuk transisi 2-fase');
   }
 
   /* ============================================================
@@ -149,73 +263,9 @@
   }
 
   /* ============================================================
-     SLIDE TRANSITION — INTERCEPT KLIK MENU (CAPTURE PHASE)
+     EXPOSE untuk dipakai view custom (contoh: Jadwal Posyandu)
      ============================================================ */
-  function setupSlideTransition(){
-    // Capture phase — jalan SEBELUM handler nav
-    document.addEventListener('click', function(e){
-      const nav = e.target.closest('.nav-item[data-view], [data-view]');
-      if(!nav) return;
-      
-      const content = document.getElementById('content');
-      if(!content) return;
-      
-      // Cegah double-trigger
-      if(content._zstAnimating) return;
-      content._zstAnimating = true;
-      
-      // STEP 1: Sembunyikan konten saat ini (instant, tanpa animasi)
-      content.style.transition = 'none';
-      content.style.opacity = '0';
-      content.style.transform = 'translateX(20px)';
-      
-      // Force reflow — biar browser render kondisi tersembunyi dulu
-      void content.offsetHeight;
-      
-      // STEP 2: Tunggu sebentar supaya handler nav sempat render konten baru
-      setTimeout(() => {
-        // STEP 3: Animasi masuk — fade in + slide dari kanan
-        content.style.transition = 'opacity 0.35s ease, transform 0.45s cubic-bezier(0.16, 1, 0.3, 1)';
-        content.style.opacity = '1';
-        content.style.transform = 'translateX(0)';
-        
-        // STEP 4: Cleanup setelah selesai
-        setTimeout(() => {
-          content.style.transition = '';
-          content.style.transform = '';
-          content.style.opacity = '';
-          content._zstAnimating = false;
-        }, 500);
-      }, 30);
-    }, true); // ← capture phase, WAJIB
-  }
-
-  /* ============================================================
-     SLIDE UNTUK HASHCHANGE (kalau ada navigasi pakai hash)
-     ============================================================ */
-  function setupHashTransition(){
-    window.addEventListener('hashchange', function(){
-      const content = document.getElementById('content');
-      if(!content || content._zstAnimating) return;
-      
-      content._zstAnimating = true;
-      content.style.transition = 'none';
-      content.style.opacity = '0';
-      content.style.transform = 'translateX(20px)';
-      
-      setTimeout(() => {
-        content.style.transition = 'opacity 0.35s ease, transform 0.45s cubic-bezier(0.16, 1, 0.3, 1)';
-        content.style.opacity = '1';
-        content.style.transform = 'translateX(0)';
-        setTimeout(() => {
-          content.style.transition = '';
-          content.style.transform = '';
-          content.style.opacity = '';
-          content._zstAnimating = false;
-        }, 500);
-      }, 30);
-    });
-  }
+  window.zstTransition = doTransition;
 
   /* ============================================================
      BOOT
@@ -224,13 +274,15 @@
     injectCSS();
     attachRipple();
     attachButtonRipple();
-    setupSlideTransition();
-    setupHashTransition();
+    hookShowView();
     
-    // Re-attach ripple untuk nav baru (contoh: Jadwal Posyandu)
-    setInterval(attachRipple, 3000);
+    // Re-attach ripple untuk nav baru (Jadwal Posyandu dll)
+    setInterval(() => {
+      attachRipple();
+      hookShowView();
+    }, 3000);
     
-    console.log('✨ Animasi v4 (SLIDE/PUSH) aktif!');
+    console.log('✨ Animasi 2-Fase aktif!');
   }
   
   if(document.readyState === 'loading'){
