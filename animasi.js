@@ -1,12 +1,13 @@
 /* ================================================================
-   Z-STUNTING · ANIMASI v5 (ULTRA SMOOTH — GPU)
-   ✅ translate3d (GPU)
-   ✅ Lock height (no layout jump)
+   Z-STUNTING · ANIMASI ZOOM IN v6
+   Fase 1: Konten lama mengecil + fade out (zoom out keluar)
+   Fase 2: Konten baru membesar + fade in (zoom in masuk)
+   ✅ GPU accelerated
+   ✅ Lock height, no layout jump
    ✅ Material easing
-   ✅ No scale, no flicker
    ================================================================ */
 (function(){
-  console.log('%c✨ Animasi v5 (ULTRA SMOOTH) loading...', 'color:#00C9FF;font-weight:bold');
+  console.log('%c✨ Animasi ZOOM IN loading...', 'color:#00C9FF;font-weight:bold');
 
   /* ============================================================
      INJECT CSS
@@ -16,13 +17,12 @@
     const style = document.createElement('style');
     style.id = '_zstAnimStyle';
     style.textContent = `
-      /* ============ #CONTENT — GPU ACCELERATED ============ */
+      /* ============ #CONTENT — GPU ============ */
       #content {
         will-change: opacity, transform;
         backface-visibility: hidden;
         -webkit-backface-visibility: hidden;
-        transform: translate3d(0, 0, 0);
-        perspective: 1000px;
+        transform-origin: center center;
       }
       
       /* ============ CARD — GPU ============ */
@@ -30,6 +30,7 @@
         will-change: opacity, transform;
         backface-visibility: hidden;
         -webkit-backface-visibility: hidden;
+        transform-origin: center center;
       }
       
       /* ============ STAT CARD HOVER ============ */
@@ -60,7 +61,7 @@
       }
       
       .nav-item:active {
-        transform: scale(0.98) !important;
+        transform: scale(0.97) !important;
       }
       
       /* ============ RIPPLE ============ */
@@ -77,7 +78,6 @@
         animation: zstRippleAnim 0.6s cubic-bezier(0.4, 0, 0.2, 1);
         pointer-events: none;
         z-index: 1;
-        backface-visibility: hidden;
       }
       
       /* ============ BUTTON ============ */
@@ -105,11 +105,11 @@
       }
     `;
     document.head.appendChild(style);
-    console.log('✅ CSS v5 terpasang');
+    console.log('✅ CSS v6 (zoom) terpasang');
   }
 
   /* ============================================================
-     TRANSISI 2-FASE ULTRA SMOOTH
+     TRANSISI ZOOM IN 2-FASE
      ============================================================ */
   function doTransition(renderFn){
     const content = document.getElementById('content');
@@ -118,38 +118,35 @@
       return;
     }
     
-    // Cegah dobel trigger
     if(content._zstAnimating){
       if(renderFn) renderFn();
       return;
     }
     content._zstAnimating = true;
     
-    // ============================================================
-     // LOCK HEIGHT — cegah layout jump
-     // ============================================================
+    // Lock height — cegah layout jump
     const startHeight = content.offsetHeight;
     content.style.minHeight = startHeight + 'px';
     content.style.overflow = 'hidden';
     
     // ============================================================
-    // FASE 1 — Konten lama fade out + slide keluar (ke kiri)
+    // FASE 1 — Konten lama ZOOM OUT (mengecil) + fade out
     // ============================================================
     content.style.transition = 
-      'opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), ' +
-      'transform 0.35s cubic-bezier(0.4, 0, 0.2, 1)';
+      'opacity 0.28s cubic-bezier(0.4, 0, 0.2, 1), ' +
+      'transform 0.32s cubic-bezier(0.4, 0, 0.2, 1)';
     
     content.style.opacity = '0';
-    content.style.transform = 'translate3d(-30px, 0, 0)';
+    content.style.transform = 'scale3d(0.85, 0.85, 1)';
     
     // Tunggu fase 1 selesai
     setTimeout(() => {
       // ============================================================
-      // STEP TENGAH — siapkan posisi awal konten baru (dari kanan)
+      // STEP TENGAH — setup posisi awal konten baru (zoom out kecil)
       // ============================================================
       content.style.transition = 'none';
       content.style.opacity = '0';
-      content.style.transform = 'translate3d(40px, 0, 0)';
+      content.style.transform = 'scale3d(1.15, 1.15, 1)';
       
       // Render konten baru (masih invisible)
       if(renderFn){
@@ -157,53 +154,47 @@
         catch(e){ console.warn('render error:', e); }
       }
       
-      // Force reflow — biar browser render dulu
       void content.offsetHeight;
       
-      // Setup card untuk stagger (5 card pertama)
+      // Setup card untuk stagger zoom-in kecil → normal
       const cards = Array.from(content.querySelectorAll('.card')).slice(0, 5);
       cards.forEach(card => {
         card.style.transition = 'none';
         card.style.opacity = '0';
-        card.style.transform = 'translate3d(0, 20px, 0)';
+        card.style.transform = 'scale3d(0.9, 0.9, 1)';
       });
       
       // ============================================================
-      // FASE 2 — Konten baru fade in + slide masuk dari kanan
+      // FASE 2 — Konten baru ZOOM IN (dari kecil ke normal) + fade in
       // ============================================================
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
-          // #content utama
           content.style.transition = 
-            'opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1), ' +
-            'transform 0.45s cubic-bezier(0.2, 0.9, 0.3, 1)';
+            'opacity 0.42s cubic-bezier(0.4, 0, 0.2, 1), ' +
+            'transform 0.5s cubic-bezier(0.16, 1, 0.3, 1)';
           content.style.opacity = '1';
-          content.style.transform = 'translate3d(0, 0, 0)';
+          content.style.transform = 'scale3d(1, 1, 1)';
           
-          // Card stagger
+          // Card stagger zoom in
           setTimeout(() => {
             cards.forEach((card, i) => {
               const delay = i * 0.06;
               card.style.transition = 
-                `opacity 0.45s cubic-bezier(0.4, 0, 0.2, 1) ${delay}s, ` +
-                `transform 0.5s cubic-bezier(0.2, 0.9, 0.3, 1) ${delay}s`;
+                `opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1) ${delay}s, ` +
+                `transform 0.5s cubic-bezier(0.16, 1, 0.3, 1) ${delay}s`;
               card.style.opacity = '1';
-              card.style.transform = 'translate3d(0, 0, 0)';
+              card.style.transform = 'scale3d(1, 1, 1)';
             });
           }, 60);
           
-          // ============================================================
-          // CLEANUP
-          // ============================================================
+          // Cleanup
           setTimeout(() => {
-            // Reset #content
             content.style.transition = '';
             content.style.transform = '';
             content.style.opacity = '';
             content.style.minHeight = '';
             content.style.overflow = '';
             
-            // Reset cards
             cards.forEach(card => {
               card.style.transition = '';
               card.style.transform = '';
@@ -211,10 +202,10 @@
             });
             
             content._zstAnimating = false;
-          }, 900);
+          }, 950);
         });
       });
-    }, 340);
+    }, 320);
   }
 
   /* ============================================================
@@ -230,11 +221,11 @@
         orig.call(this, view, btn);
       });
     };
-    console.log('✅ showView di-hook (v5)');
+    console.log('✅ showView di-hook (v6 zoom)');
   }
 
   /* ============================================================
-     RIPPLE PADA NAV
+     RIPPLE NAV
      ============================================================ */
   function attachRipple(){
     document.querySelectorAll('.nav-item').forEach(nav => {
@@ -256,7 +247,7 @@
   }
 
   /* ============================================================
-     RIPPLE PADA TOMBOL
+     RIPPLE TOMBOL
      ============================================================ */
   function attachButtonRipple(){
     document.addEventListener('click', function(e){
@@ -285,9 +276,6 @@
     });
   }
 
-  /* ============================================================
-     EXPOSE untuk view custom
-     ============================================================ */
   window.zstTransition = doTransition;
 
   /* ============================================================
@@ -304,7 +292,7 @@
       hookShowView();
     }, 3000);
     
-    console.log('✨ Animasi v5 (ULTRA SMOOTH) aktif!');
+    console.log('✨ Animasi ZOOM IN aktif!');
   }
   
   if(document.readyState === 'loading'){
